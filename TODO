@@ -1,0 +1,31 @@
+
+- access=no
+- access=yes
+- access=destination
+- highway=footway && !bicycle
+- highway=footway && foot=*
+- highway=service && access=private
+- highway=service && name=*
+- highway=service && ref=*
+- highway=track && ref=*
+- highway=track && name=*
+- living_street && maxspeed=*
+- living_street && foot=*
+- living_street && motor_vehicle=*
+- living_street && vehicle=*
+- living_street && horse=*
+- living_street && bicycle=*
+- junction=roundabout && ref
+- junction=roundabout && name
+- junction=roundabout && oneway
+- highway=motorway && !ref
+- highway=primary && !ref
+- highway=secondary && !ref
+- tunnel=no
+- oneway=no
+- motorway && oneway=yes
+- construction=no
+- highway=* && bicycle=yes
+
+- noexit?
+- highway=track in landuse=residential?

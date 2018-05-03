@@ -1,0 +1,6 @@
+<h4>Way problems:</h4>
+Way <a href="https://www.openstreetmap.org/way/{{ id }}">{{ id }}</a><br>
+Last modified {{ timestamp }}<br>
+in changeset {{ changeset }} by {{ user }}<br>
+<p style="font-size: 1.2em;">{{ problem }}</p>
+{{> remotecontrol wayselect=id }}
