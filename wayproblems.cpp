@@ -234,6 +234,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.has_key("goods")) {
 				writer.writeWay(way, "default", "goods=* is not in use in Germany - no distinction between goods and hgv");
 			}
+
 			if (taglist.has_key("access")) {
 				if (taglist.key_value_is_false("access")) {
 					writer.writeWay(way, "default", "access=no - Nicht StVO konform. Vermutlich motor_vehicle=no oder vehicle=no");
@@ -250,6 +251,7 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
+
 			if (taglist.has_key_value("highway", "track")) {
 				if (taglist.has_key("name")) {
 					writer.writeWay(way, "default", "highway=track with name is suspicious - probably not track");
@@ -257,6 +259,9 @@ class WayHandler : public osmium::handler::Handler {
 				if (taglist.has_key("maxspeed")) {
 					writer.writeWay(way, "default", "highway=track with maxspeed is suspicious - probably not track");
 				}
+			} else {
+				if (taglist.has_key("tracktype"))
+					writer.writeWay(way, "default", "tracktype=* on non track");
 			}
 
 			if (taglist.has_key_value("highway", "footway")) {
