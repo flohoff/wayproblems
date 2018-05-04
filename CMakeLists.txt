@@ -22,7 +22,9 @@ find_package(Boost 1.55.0 REQUIRED COMPONENTS program_options filesystem system 
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(wayproblems wayproblems.cpp)
+add_executable(accesscombinations accesscombinations.cpp)
 include_directories("${OSMIUM_INCLUDE_DIRS}")
 include_directories(${Boost_INCLUDE_DIRS})
 target_link_libraries(wayproblems ${OSMIUM_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(accesscombinations ${OSMIUM_LIBRARIES} ${Boost_LIBRARIES})
 
