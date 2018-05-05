@@ -221,8 +221,10 @@ class WayHandler : public osmium::handler::Handler {
 			}
 
 			if (!taglist.highway_may_have_ref()) {
-				if (taglist.has_key("ref")) {
-					writer.writeWay(L_REF, way, "ref", "highway should not have ref");
+				if (!taglist.has_key_value("highway", "path")) {
+					if (taglist.has_key("ref")) {
+						writer.writeWay(L_REF, way, "ref", "highway should not have ref");
+					}
 				}
 			}
 
@@ -271,7 +273,6 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_WP, way, "default", "highway=service with name=* is suspicious - Either public e.g. not service or name tag abuse");
 				}
 			}
-
 
 			if (taglist.has_key_value("highway", "track")) {
 				if (taglist.has_key("name")) {
