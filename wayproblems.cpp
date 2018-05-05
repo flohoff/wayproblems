@@ -193,7 +193,7 @@ class extendedTagList  {
 			return string_in_list(highway, motor_vehicle_highway);
 		}
 
-		bool is_public() {
+		bool is_public_road() {
 			return string_in_list(get_value_by_key("highway"), highway_public);
 		}
 };
@@ -226,27 +226,30 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
-			{
-				std::vector<const char *>	accesstags={
+			if (taglist.has_key_value("highway", "road")) {
+				writer.writeWay(L_WP, way, "default", "highway=road is only a temporary tagging for sat imagery based mapping");
+			}
+
+			if (taglist.is_public_road()) {
+				const std::vector<const char *>	accesstags={
 					"access", "vehicle", "motor_vehicle", "motorcycle",
 					"motorcar", "hgv", "psv", "bicycle", "foot",
 					"goods", "mofa", "moped", "horse"};
 
-				if (taglist.is_public()) {
-					for(auto key : accesstags) {
-						const char *value=taglist.get_value_by_key(key);
-						if (!value)
-							continue;
-						if (!strcmp(value, "permissive")) {
-							writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have permissive access tags", key);
-						} else if (!strcmp(value, "private")) {
-							writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have private access tags", key);
-						} else if (!strcmp(value, "customers")) {
-							writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have customers access tags", key);
-						}
+				for(auto key : accesstags) {
+					const char *value=taglist.get_value_by_key(key);
+
+					if (!value)
+						continue;
+
+					if (!strcmp(value, "permissive")) {
+						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have permissive access tags", key);
+					} else if (!strcmp(value, "private")) {
+						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have private access tags", key);
+					} else if (!strcmp(value, "customers")) {
+						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have customers access tags", key);
 					}
 				}
-
 			}
 
 			if (taglist.has_key("goods")) {
