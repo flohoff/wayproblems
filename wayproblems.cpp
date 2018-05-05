@@ -240,16 +240,17 @@ class WayHandler : public osmium::handler::Handler {
 
 				for(auto key : accesstags) {
 					const char *value=taglist.get_value_by_key(key);
+					const char *highway=taglist.get_value_by_key("highway");
 
 					if (!value)
 						continue;
 
 					if (!strcmp(value, "permissive")) {
-						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have permissive access tags", key);
+						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=permissive access tags", highway, key);
 					} else if (!strcmp(value, "private")) {
-						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have private access tags", key);
+						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=private access tags", highway, key);
 					} else if (!strcmp(value, "customers")) {
-						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have customers access tags", key);
+						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=customers access tags", highway, key);
 					}
 				}
 			}
