@@ -37,19 +37,30 @@ using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
 
 #define DEBUG 0
 
+enum layerid {
+	L_WP,
+	L_REF,
+	L_FOOTWAY,
+	layermax
+};
+
 class SpatiaLiteWriter : public osmium::handler::Handler {
-    gdalcpp::Layer		*m_layer_wayproblem;
-    gdalcpp::Layer		*m_layer_footway;
-    gdalcpp::Dataset		dataset;
-    osmium::geom::OGRFactory<>	m_factory{};
-public:
-    explicit SpatiaLiteWriter(std::string &dbname) :
-	dataset("sqlite", dbname, gdalcpp::SRS{}, {  "SPATIALITE=TRUE", "INIT_WITH_EPSG=no" }) {
+	std::array<gdalcpp::Layer *, layermax>	layer;
 
-		dataset.exec("PRAGMA synchronous = OFF");
+	gdalcpp::Dataset		dataset;
+	osmium::geom::OGRFactory<>	m_factory{};
 
-		m_layer_wayproblem=addLineStringLayer("wayproblems");
-	}
+	public:
+
+	explicit SpatiaLiteWriter(std::string &dbname) :
+			dataset("sqlite", dbname, gdalcpp::SRS{}, {  "SPATIALITE=TRUE", "INIT_WITH_EPSG=no" }) {
+
+			dataset.exec("PRAGMA synchronous = OFF");
+
+			layer[L_WP]=addLineStringLayer("wayproblems");
+			layer[L_REF]=addLineStringLayer("ref");
+			layer[L_FOOTWAY]=addLineStringLayer("footway");
+		}
 
 	gdalcpp::Layer *addLineStringLayer(const char *name) {
 		gdalcpp::Layer *layer=new gdalcpp::Layer(dataset, name, wkbLineString);
@@ -66,11 +77,17 @@ public:
 		return layer;
 	}
 
-	void writeWay(const osmium::Way& way, const char *style, const char *problem) {
+	void writeWay(layerid lid, const osmium::Way& way, const char *style, const char *format, ...) {
 		try  {
-			std::unique_ptr<OGRLineString> linestring = m_factory.create_linestring(way);
+			std::unique_ptr<OGRLineString>	linestring = m_factory.create_linestring(way);
+			char				problem[256];
+			va_list				args;
 
-			gdalcpp::Feature feature{*m_layer_wayproblem, std::move(linestring)};
+			va_start(args, format);
+			vsnprintf (problem, 255, format, args);
+			va_end (args);
+
+			gdalcpp::Feature feature{*layer[lid], std::move(linestring)};
 
 			feature.set_field("id", static_cast<double>(way.id()));
 			feature.set_field("user", way.user());
@@ -84,11 +101,11 @@ public:
 			std::cout << " way " << way.id() << " " << problem << std::endl;
 
 		} catch (gdalcpp::gdal_error) {
-			std::cerr << "gdal_error while creating feature " << std::endl;
+			std::cerr << "gdal_error while creating feature wayid " << way.id()<< std::endl;
 		} catch (osmium::invalid_location) {
-			std::cerr << "invalid location" << std::endl;
+			std::cerr << "invalid location wayid " << way.id() << std::endl;
 		} catch (osmium::geometry_error) {
-			std::cerr << "geometry error" << std::endl;
+			std::cerr << "geometry error wayid " << way.id() << std::endl;
 		}
 	}
 };
@@ -181,6 +198,7 @@ class extendedTagList  {
 		}
 };
 
+
 class WayHandler : public osmium::handler::Handler {
 	SpatiaLiteWriter	&writer;
 
@@ -197,14 +215,14 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.highway_should_have_ref()) {
 				if (!taglist.has_key_value("junction", "roundabout")) {
 					if (!taglist.has_key("ref")) {
-						writer.writeWay(way, "ref", "highway should have ref");
+						writer.writeWay(L_REF, way, "ref", "highway should have ref");
 					}
 				}
 			}
 
 			if (!taglist.highway_may_have_ref()) {
 				if (taglist.has_key("ref")) {
-					writer.writeWay(way, "ref", "highway should not have ref");
+					writer.writeWay(L_REF, way, "ref", "highway should not have ref");
 				}
 			}
 
@@ -220,11 +238,11 @@ class WayHandler : public osmium::handler::Handler {
 						if (!value)
 							continue;
 						if (!strcmp(value, "permissive")) {
-							writer.writeWay(way, "default", "public highway cant have permissive access tags");
+							writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have permissive access tags", key);
 						} else if (!strcmp(value, "private")) {
-							writer.writeWay(way, "default", "public highway cant have private access tags");
+							writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have private access tags", key);
 						} else if (!strcmp(value, "customers")) {
-							writer.writeWay(way, "default", "public highway cant have customers access tags");
+							writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have customers access tags", key);
 						}
 					}
 				}
@@ -232,141 +250,154 @@ class WayHandler : public osmium::handler::Handler {
 			}
 
 			if (taglist.has_key("goods")) {
-				writer.writeWay(way, "default", "goods=* is not in use in Germany - no distinction between goods and hgv");
+				writer.writeWay(L_WP, way, "default", "goods=* is not in use in Germany - no distinction between goods and hgv");
 			}
 
 			if (taglist.has_key("access")) {
 				if (taglist.key_value_is_false("access")) {
-					writer.writeWay(way, "default", "access=no - Nicht StVO konform. Vermutlich motor_vehicle=no oder vehicle=no");
+					writer.writeWay(L_WP, way, "default", "access=no - Nicht StVO konform. Vermutlich motor_vehicle=no oder vehicle=no");
 				} else if (taglist.key_value_is_true("access")) {
-					writer.writeWay(way, "redundant", "access=yes - vermutlich redundant");
+					writer.writeWay(L_WP, way, "redundant", "access=yes - vermutlich redundant");
 				} else if (taglist.has_key_value("access", "destination")) {
-					writer.writeWay(way, "default", "access=destination nicht StVO konform. Vermutlich vehicle=destination oder motor_vehicle=destination");
+					writer.writeWay(L_WP, way, "default", "access=destination nicht StVO konform. Vermutlich vehicle=destination oder motor_vehicle=destination");
 				}
 			}
 
 			if (taglist.has_key_value("highway", "service")) {
 				if (taglist.has_key("name")) {
-					writer.writeWay(way, "default", "highway=service with name=* is suspicious - Either public e.g. not service or name tag abuse");
+					writer.writeWay(L_WP, way, "default", "highway=service with name=* is suspicious - Either public e.g. not service or name tag abuse");
 				}
 			}
 
 
 			if (taglist.has_key_value("highway", "track")) {
 				if (taglist.has_key("name")) {
-					writer.writeWay(way, "default", "highway=track with name is suspicious - probably not track");
+					writer.writeWay(L_WP, way, "default", "highway=track with name is suspicious - probably not track");
 				}
 				if (taglist.has_key("maxspeed")) {
-					writer.writeWay(way, "default", "highway=track with maxspeed is suspicious - probably not track");
+					writer.writeWay(L_WP, way, "default", "highway=track with maxspeed is suspicious - probably not track");
+				}
+
+				std::vector<const char *>	defaultno={ "motorcycle", "motorcar", "hgv", "psv", "motor_vehicle", "vehicle" };
+				for(auto key : defaultno) {
+					if (taglist.key_value_is_false(key)) {
+						writer.writeWay(L_WP, way, "default", "highway=track - %s=no is suspicious - should be agricutural or empty", key);
+					}
 				}
 			} else {
 				if (taglist.has_key("tracktype"))
-					writer.writeWay(way, "default", "tracktype=* on non track");
+					writer.writeWay(L_WP, way, "default", "tracktype=* on non track");
 			}
 
 			if (taglist.has_key_value("highway", "footway")) {
 				if (!taglist.has_key("bicycle")) {
-					writer.writeWay(way, "footway", "highway=footway without bicycle=yes/no tag - suspicious combination");
+					writer.writeWay(L_FOOTWAY, way, "footway", "highway=footway without bicycle=yes/no tag - suspicious combination");
 				}
 
 				if (taglist.key_value_is_true("foot")) {
-					writer.writeWay(way, "redundant", "highway=footway with foot=yes is redundant");
-				}
-				if (taglist.key_value_is_false("foot")) {
-					writer.writeWay(way, "default", "highway=footway with foot=no is broken");
+					writer.writeWay(L_WP, way, "redundant", "highway=footway with foot=yes is redundant");
+					writer.writeWay(L_FOOTWAY, way, "redundant", "highway=footway with foot=yes is redundant");
+				} else if (taglist.key_value_is_false("foot")) {
+					writer.writeWay(L_WP, way, "default", "highway=footway with foot=no is broken");
+					writer.writeWay(L_FOOTWAY, way, "default", "highway=footway with foot=no is broken");
 				}
 			}
 
 			if (taglist.has_key_value("highway", "living_street")) {
 				if (taglist.has_key("maxspeed")) {
-					writer.writeWay(way, "default", "maxspeed on living_street is broken - neither numeric nor walk is correct");
+					writer.writeWay(L_WP, way, "default", "maxspeed on living_street is broken - neither numeric nor walk is correct");
 				}
 
-				if (taglist.key_value_is_false("bicycle")) {
-					writer.writeWay(way, "default", "living_street with bicycle=no is broken");
+				std::vector<const char *>	defaultyes={ "bicycle", "foot", "vehicle" };
+				for(auto key : defaultyes) {
+					if (taglist.key_value_is_false(key)) {
+						writer.writeWay(L_WP, way, "default", "living_street with %s=no is broken", key);
+					} else if (taglist.key_value_is_true(key)) {
+						writer.writeWay(L_WP, way, "redundant", "living_street with %s=yes is redundant", key);
+					}
 				}
-				if (taglist.key_value_is_true("bicycle")) {
-					writer.writeWay(way, "redundant", "living_street with bicycle=yes is redundant");
-				}
+			}
 
-				if (taglist.key_value_is_false("foot")) {
-					writer.writeWay(way, "default", "foot=no on living_street is broken");
+			if (taglist.has_key_value("highway", "path")) {
+				std::vector<const char *>	multitrack={ "motorcar", "goods", "hgv", "psv", "motor_vehicle", "agricultural", "atv", "bus" };
+				for(auto key : multitrack) {
+					if (taglist.key_value_is_true(key)) {
+						writer.writeWay(L_WP, way, "default", "highway=path - %s=yes is suspicious - cant fit on single track path", key);
+					} else if (taglist.key_value_is_false(key)) {
+						writer.writeWay(L_WP, way, "redundant", "highway=path - %s=no is default", key);
+					} else if (taglist.has_key_value(key, "permissive")) {
+						writer.writeWay(L_WP, way, "default", "highway=path - %s=permissive - cant fit on a single track path", key);
+					} else if (taglist.has_key_value(key, "private")) {
+						writer.writeWay(L_WP, way, "default", "highway=path - %s=private - cant fit on a single track path", key);
+					} else if (taglist.has_key_value(key, "agricultural")) {
+						writer.writeWay(L_WP, way, "default", "highway=path - %s=agricultural - cant fit on a single track path", key);
+					}
 				}
-				if (taglist.key_value_is_true("foot")) {
-					writer.writeWay(way, "redundant", "foot=yes on living_street is redundant");
-				}
-
-				if (taglist.key_value_is_false("vehicle")) {
-					writer.writeWay(way, "default", "vehicle=no on living_street is broken");
-				}
-				if (taglist.key_value_is_true("vehicle")) {
-					writer.writeWay(way, "redundant", "vehicle=yes on living_street is redundant");
-				}
-
+				/* Broken tags - hazmat=no/yes bullshit */
 			}
 
 			if (taglist.has_key_value("highway", "cycleway")) {
 				if (taglist.key_value_is_true("bicycle")) {
-					writer.writeWay(way, "redundant", "bicycle=yes on cycleway is redundant");
+					writer.writeWay(L_WP, way, "redundant", "bicycle=yes on cycleway is redundant");
 				}
 				if (taglist.key_value_is_false("bicycle")) {
-					writer.writeWay(way, "default", "bicycle=no on cycleway is broken");
+					writer.writeWay(L_WP, way, "default", "bicycle=no on cycleway is broken");
 				}
 				if (taglist.has_key_value("vehicle", "yes")) {
-					writer.writeWay(way, "default", "vehicle=yes on cycleway is broken as its not a cycleway");
+					writer.writeWay(L_WP, way, "default", "vehicle=yes on cycleway is broken as its not a cycleway");
 				}
 				if (taglist.has_key_value("vehicle", "no")) {
-					writer.writeWay(way, "default", "vehicle=no on cycleway is broken as bicycle is a vehicle");
+					writer.writeWay(L_WP, way, "default", "vehicle=no on cycleway is broken as bicycle is a vehicle");
 				}
 			}
 
 			if (taglist.key_value_is_true("vehicle")) {
 				if (taglist.key_value_is_false("motor_vehicle")) {
-					writer.writeWay(way, "default", "vehicle=yes and motor_vehicle=no should be bicyle");
+					writer.writeWay(L_WP, way, "default", "vehicle=yes and motor_vehicle=no should be bicyle");
 				} else if (taglist.key_value_is_true("motor_vehicle")) {
-					writer.writeWay(way, "redundant", "vehicle=yes and motor_vehicle=yes is redundant");
+					writer.writeWay(L_WP, way, "redundant", "vehicle=yes and motor_vehicle=yes is redundant");
 				}
 			}
 
 			if (taglist.key_value_is_true("motor_vehicle")) {
 				if (taglist.key_value_is_false("motorcycle")) {
-					writer.writeWay(way, "default", "motor_vehicle=yes and motorcycle=no should be motorcar + hgv");
+					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and motorcycle=no should be motorcar + hgv");
 				} else if (taglist.key_value_is_true("motorcycle")) {
-					writer.writeWay(way, "redundant", "motor_vehicle=yes and motorcycle=yes is redundant");
+					writer.writeWay(L_WP, way, "redundant", "motor_vehicle=yes and motorcycle=yes is redundant");
 				}
 
 				if (taglist.key_value_is_false("motorcar")) {
-					writer.writeWay(way, "default", "motor_vehicle=yes and motorcar=no should be motorcycle");
+					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and motorcar=no should be motorcycle");
 				} else if (taglist.key_value_is_true("motorcar")) {
-					writer.writeWay(way, "redundant", "motor_vehicle=yes and motorcar=yes is redundant");
+					writer.writeWay(L_WP, way, "redundant", "motor_vehicle=yes and motorcar=yes is redundant");
 				}
 
 				if (taglist.key_value_is_false("hgv")) {
-					writer.writeWay(way, "default", "motor_vehicle=yes and hgv=no should be motorcar");
+					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and hgv=no should be motorcar");
 				} else if (taglist.key_value_is_true("hgv")) {
-					writer.writeWay(way, "redundant", "motor_vehicle=yes and hgv=yes is redundant");
+					writer.writeWay(L_WP, way, "redundant", "motor_vehicle=yes and hgv=yes is redundant");
 				}
 			}
 
 			if (taglist.key_value_is_false("tunnel")) {
-				writer.writeWay(way, "redundant", "tunnel=no ist redundant");
+				writer.writeWay(L_WP, way, "redundant", "tunnel=no ist redundant");
 			}
 			if (taglist.key_value_is_false("construction")) {
-				writer.writeWay(way, "redundant", "construction=no ist redundant");
+				writer.writeWay(L_WP, way, "redundant", "construction=no ist redundant");
 			}
 			if (taglist.key_value_is_false("oneway")) {
-				writer.writeWay(way, "redundant", "oneway=no ist redundant");
+				writer.writeWay(L_WP, way, "redundant", "oneway=no ist redundant");
 			}
 
 			if (taglist.has_key_value("junction", "roundabout")) {
 				if (taglist.has_key("name")) {
-					writer.writeWay(way, "default", "name on roundabout is most like an error");
+					writer.writeWay(L_WP, way, "default", "name on roundabout is most like an error");
 				}
 				if (taglist.has_key("ref")) {
-					writer.writeWay(way, "default", "ref on roundabout is most like an error");
+					writer.writeWay(L_WP, way, "default", "ref on roundabout is most like an error");
 				}
 				if (taglist.has_key("oneway")) {
-					writer.writeWay(way, "redundant", "oneway on roundabout is redundant");
+					writer.writeWay(L_WP, way, "redundant", "oneway on roundabout is redundant");
 				}
 			}
 		}
