@@ -98,7 +98,12 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 
 			feature.add_to_layer();
 
-			std::cout << " way " << way.id() << " " << problem << std::endl;
+			std::cout << " way " << way.id() << " "
+				<< "changeset " << way.changeset() << " "
+				<< way.user() << " "
+				<< way.timestamp().to_iso() << " - "
+				<< problem << " "
+				<< std::endl;
 
 		} catch (gdalcpp::gdal_error) {
 			std::cerr << "gdal_error while creating feature wayid " << way.id()<< std::endl;
@@ -253,6 +258,11 @@ class WayHandler : public osmium::handler::Handler {
 						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=customers access tags", highway, key);
 					}
 				}
+
+
+				if (taglist.has_key_value("cycleway", "track") && taglist.has_key_value("bicycle", "use_sidepath")) {
+					writer.writeWay(L_WP, way, "default", "cycleway=track and bicycle=use_sidepath on road is broken as there is no seperate cycleway");
+				}
 			}
 
 			if (taglist.has_key("goods")) {
@@ -299,6 +309,11 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_FOOTWAY, way, "footway", "highway=footway without bicycle=yes/no tag - suspicious combination");
 				}
 
+				if (taglist.has_key_value("bicycle", "use_sidepath")) {
+					writer.writeWay(L_WP, way, "default", "bicycle=use_sidepath on cycleway is broken - should be on main road");
+					writer.writeWay(L_FOOTWAY, way, "default", "bicycle=use_sidepath on cycleway is broken - should be on main road");
+				}
+
 				if (taglist.key_value_is_true("foot")) {
 					writer.writeWay(L_WP, way, "redundant", "highway=footway with foot=yes is redundant");
 					writer.writeWay(L_FOOTWAY, way, "redundant", "highway=footway with foot=yes is redundant");
@@ -306,11 +321,17 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_WP, way, "default", "highway=footway with foot=no is broken");
 					writer.writeWay(L_FOOTWAY, way, "default", "highway=footway with foot=no is broken");
 				}
+
+				/* TODO What about other access types vehicle/motor_vehicle/hgv/goods? yes/designated etc */
 			}
 
 			if (taglist.has_key_value("highway", "living_street")) {
 				if (taglist.has_key("maxspeed")) {
 					writer.writeWay(L_WP, way, "default", "maxspeed on living_street is broken - neither numeric nor walk is correct");
+				}
+
+				if (taglist.has_key_value("bicycle", "use_sidepath")) {
+					writer.writeWay(L_WP, way, "default", "bicycle=use_sidepath on living_street is broken - living_street explicitly includes bicycles");
 				}
 
 				std::vector<const char *>	defaultyes={ "bicycle", "foot", "vehicle" };
@@ -347,6 +368,9 @@ class WayHandler : public osmium::handler::Handler {
 				}
 				if (taglist.key_value_is_false("bicycle")) {
 					writer.writeWay(L_WP, way, "default", "bicycle=no on cycleway is broken");
+				}
+				if (taglist.has_key_value("bicycle", "use_sidepath")) {
+					writer.writeWay(L_WP, way, "default", "bicycle=use_sidepath on cycleway is broken - should be on main road");
 				}
 				if (taglist.has_key_value("vehicle", "yes")) {
 					writer.writeWay(L_WP, way, "default", "vehicle=yes on cycleway is broken as its not a cycleway");
