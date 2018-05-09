@@ -283,6 +283,10 @@ class WayHandler : public osmium::handler::Handler {
 				if (taglist.has_key("name")) {
 					writer.writeWay(L_WP, way, "default", "highway=service with name=* is suspicious - Either public e.g. not service or name tag abuse");
 				}
+			} else {
+				if (taglist.has_key("service")) {
+					writer.writeWay(L_WP, way, "default", "service=%s on non service highway", taglist.get_value_by_key("service"));
+				}
 			}
 
 			if (taglist.has_key_value("highway", "track")) {
