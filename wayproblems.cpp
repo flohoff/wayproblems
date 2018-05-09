@@ -248,14 +248,26 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
-			if (taglist.has_key("maxspeed")) {
-				if (!taglist.key_value_in_list("maxspeed", { "none", "signals" })) {
-					try {
-						int ms=std::stoi(taglist.get_value_by_key("maxspeed"), nullptr, 10);
-					} catch(std::invalid_argument) {
-						writer.writeWay(L_WP, way, "default", "maxspeed=%s is not numerical", taglist.get_value_by_key("maxspeed"));
+			/* TODO - Add validating unit - kmh, mph, knots */
+			const std::vector<const char *>	maxspeedtags={ "maxspeed", "maxspeed:forward", "maxspeed:backward" };
+			for(auto key : maxspeedtags) {
+				if (taglist.has_key(key)) {
+					if (!taglist.key_value_in_list(key, { "none", "signals" })) {
+						try {
+							int ms=std::stoi(taglist.get_value_by_key(key), nullptr, 10);
+						} catch(std::invalid_argument) {
+							writer.writeWay(L_WP, way, "default", "%s=%s is not numerical",
+									key, taglist.get_value_by_key(key));
+						}
 					}
 				}
+			}
+
+			if (taglist.has_key("maxspeed") && (
+					 taglist.has_key("maxspeed:forward")
+					 || taglist.has_key("maxspeed:backward")
+					)) {
+				writer.writeWay(L_WP, way, "default", "maxspeed and maxspeed:forward/backward - overlapping values");
 			}
 
 			if (!taglist.highway_may_have_ref()) {
