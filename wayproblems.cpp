@@ -225,6 +225,10 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
+			if (taglist.has_key_value("layer", "0")) {
+				writer.writeWay(L_WP, way, "redundant", "layer=0 is redundant");
+			}
+
 			if (!taglist.highway_may_have_ref()) {
 				if (!taglist.has_key_value("highway", "path")) {
 					if (taglist.has_key("ref")) {
