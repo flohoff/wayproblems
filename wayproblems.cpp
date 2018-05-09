@@ -162,6 +162,13 @@ class extendedTagList  {
 			return false;
 		}
 
+		bool key_value_in_list(const char *key, const std::vector<std::string> &list) {
+			const char *value=get_value_by_key(key);
+			if (!value)
+				return false;
+			return string_in_list(value, list);
+		}
+
 		bool highway_should_have_ref() {
 			return string_in_list(get_value_by_key("highway"), highway_should_have_ref_list);
 		}
@@ -227,6 +234,28 @@ class WayHandler : public osmium::handler::Handler {
 
 			if (taglist.has_key_value("layer", "0")) {
 				writer.writeWay(L_WP, way, "redundant", "layer=0 is redundant");
+			}
+
+			if (taglist.has_key("sidewalk")) {
+				if (!taglist.key_value_in_list("sidewalk", { "both", "left", "right", "none", "no", "yes", "separate" })) {
+					writer.writeWay(L_WP, way, "default", "sidewalk=%s not in known value list", taglist.get_value_by_key("sidewalk"));
+				}
+			}
+
+			if (taglist.has_key("shoulder")) {
+				if (!taglist.key_value_in_list("shoulder", { "both", "left", "right", "no", "yes" })) {
+					writer.writeWay(L_WP, way, "default", "shoulder=%s not in known value list", taglist.get_value_by_key("shoulder"));
+				}
+			}
+
+			if (taglist.has_key("maxspeed")) {
+				if (!taglist.key_value_in_list("maxspeed", { "none", "signals" })) {
+					try {
+						int ms=std::stoi(taglist.get_value_by_key("maxspeed"), nullptr, 10);
+					} catch(std::invalid_argument) {
+						writer.writeWay(L_WP, way, "default", "maxspeed=%s is not numerical", taglist.get_value_by_key("maxspeed"));
+					}
+				}
 			}
 
 			if (!taglist.highway_may_have_ref()) {
