@@ -247,6 +247,44 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
+			if (taglist.has_key("bicycle")) {
+				const char *bikevalue=taglist.get_value_by_key("bicycle");
+
+				if (taglist.key_value_in_list("highway", { "living_street",
+						"residential", "unclassified", "tertiary", "secondary",
+						"secondary_link", "primary", "primary_link" })) {
+
+					if (taglist.key_value_is_true("bicycle")) {
+						writer.writeWay(L_WP, way, "redundant", "bicycle=%s on highway=%s is redundant", bikevalue, highway);
+					} else if (taglist.has_key_value("bicycle", "permissive")) {
+						writer.writeWay(L_WP, way, "redundant", "bicycle=%s on highway=%s is redundant - road is public", bikevalue, highway);
+					} else if (taglist.has_key_value("bicycle", "private")) {
+						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken - road is public", bikevalue, highway);
+					} else if (taglist.has_key_value("bicycle", "customer")) {
+						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken - road is public", bikevalue, highway);
+					} else if (taglist.has_key_value("bicycle", "destination")) {
+						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is suspicious - StVO would allow vehicle=destination", bikevalue, highway);
+					}
+				}
+
+				if (taglist.key_value_in_list("highway", { "track", "service" })) {
+					if (taglist.key_value_is_true("bicycle")) {
+						writer.writeWay(L_WP, way, "redundant", "bicycle=%s on highway=%s is redundant", bikevalue, highway);
+					}
+				}
+
+				if (taglist.key_value_in_list("highway", { "trunk", "trunk_link", "motorway", "motorway_link" })) {
+					if (taglist.key_value_is_true("bicycle")) {
+						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken", bikevalue, highway);
+					}
+				}
+
+				if (!taglist.key_value_in_list("bicycle", { "yes", "no", "private", "permissive",
+						"destination" , "designated", "use_sidepath", "dismount" })) {
+					writer.writeWay(L_STRANGE, way, "default", "bicycle=%s on highway=%s", bikevalue, highway);
+				}
+			}
+
 			if (taglist.has_key("foot")) {
 				const char *footvalue=taglist.get_value_by_key("foot");
 
@@ -327,7 +365,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.is_public_road()) {
 				const std::vector<const char *>	accesstags={
 					"access", "vehicle", "motor_vehicle", "motorcycle",
-					"motorcar", "hgv", "psv", "bicycle",
+					"motorcar", "hgv", "psv",
 					"goods", "mofa", "moped", "horse"};
 
 				for(auto key : accesstags) {
@@ -425,7 +463,7 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_WP, way, "default", "bicycle=use_sidepath on living_street is broken - living_street explicitly includes bicycles");
 				}
 
-				std::vector<const char *>	defaultyes={ "bicycle", "vehicle" };
+				std::vector<const char *>	defaultyes={ "vehicle" };
 				for(auto key : defaultyes) {
 					if (taglist.key_value_is_false(key)) {
 						writer.writeWay(L_WP, way, "default", "living_street with %s=no is broken", key);
