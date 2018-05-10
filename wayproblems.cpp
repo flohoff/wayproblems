@@ -239,11 +239,41 @@ class WayHandler : public osmium::handler::Handler {
 
 			if (taglist.has_key_value("layer", "0")) {
 				writer.writeWay(L_WP, way, "redundant", "layer=0 is redundant");
+				// TODO - Numerical layer not just "0"
+				// TODO - Unparsable layer information
 			}
 
 			if (taglist.has_key("sidewalk")) {
 				if (!taglist.key_value_in_list("sidewalk", { "both", "left", "right", "none", "no", "yes", "separate" })) {
 					writer.writeWay(L_WP, way, "default", "sidewalk=%s not in known value list", taglist.get_value_by_key("sidewalk"));
+				}
+
+				/* sidewalk on motorway or trunk */
+				if (taglist.key_value_in_list("sidewalk", { "both", "left", "right", "yes" })) {
+					// Removed trunk_link - seems valid: Example https://www.openstreetmap.org/way/10871357
+					if (taglist.key_value_in_list("highway", { "motorway", "motorway_link", "trunk" })) {
+						writer.writeWay(L_WP, way, "default", "highway=%s and sidewalk=%s - most likely an error",
+							taglist.get_value_by_key("highway"),taglist.get_value_by_key("sidewalk"));
+					}
+				}
+
+				/* sidewalk on motorroad */
+				if (taglist.key_value_is_true("motorroad")) {
+					if (taglist.key_value_in_list("sidewalk", { "both", "left", "right", "yes" })) {
+						writer.writeWay(L_WP, way, "default", "motorroad=%s and sidewalk=%s - most likely an error",
+							taglist.get_value_by_key("motorroad"),taglist.get_value_by_key("sidewalk"));
+					}
+				}
+			}
+
+			if (taglist.has_key("segregated")) {
+				if (!taglist.key_value_in_list("highway", { "footway", "cycleway", "path" })) {
+					writer.writeWay(L_WP, way, "default", "highway=%s and segregated=%s - segregated only used on foot/cycleway and path",
+						taglist.get_value_by_key("highway"),taglist.get_value_by_key("segregated"));
+				}
+				if (!taglist.key_value_in_list("segregated", { "yes", "no" })) {
+					writer.writeWay(L_WP, way, "default", "segregated=%s - value not in known value list",
+						taglist.get_value_by_key("segregated"));
 				}
 			}
 
@@ -251,8 +281,10 @@ class WayHandler : public osmium::handler::Handler {
 				const char *bikevalue=taglist.get_value_by_key("bicycle");
 
 				if (taglist.key_value_in_list("highway", { "living_street",
-						"residential", "unclassified", "tertiary", "secondary",
-						"secondary_link", "primary", "primary_link" })) {
+						"residential", "unclassified",
+						"tertiary", "tertiary_link",
+						"secondary", "secondary_link",
+						"primary", "primary_link" })) {
 
 					if (taglist.key_value_is_true("bicycle")) {
 						writer.writeWay(L_WP, way, "redundant", "bicycle=%s on highway=%s is redundant", bikevalue, highway);
@@ -260,7 +292,7 @@ class WayHandler : public osmium::handler::Handler {
 						writer.writeWay(L_WP, way, "redundant", "bicycle=%s on highway=%s is redundant - road is public", bikevalue, highway);
 					} else if (taglist.has_key_value("bicycle", "private")) {
 						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken - road is public", bikevalue, highway);
-					} else if (taglist.has_key_value("bicycle", "customer")) {
+					} else if (taglist.has_key_value("bicycle", "customers")) {
 						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken - road is public", bikevalue, highway);
 					} else if (taglist.has_key_value("bicycle", "destination")) {
 						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is suspicious - StVO would allow vehicle=destination", bikevalue, highway);
@@ -289,8 +321,10 @@ class WayHandler : public osmium::handler::Handler {
 				const char *footvalue=taglist.get_value_by_key("foot");
 
 				if (taglist.key_value_in_list("highway", { "living_street",
-						"residential", "unclassified", "tertiary", "secondary",
-						"secondary_link", "primary", "primary_link" })) {
+						"residential", "unclassified",
+						"tertiary", "tertiary_link",
+						"secondary", "secondary_link",
+						"primary", "primary_link" })) {
 
 					if (taglist.key_value_is_true("foot")) {
 						writer.writeWay(L_WP, way, "redundant", "foot=%s on highway=%s is redundant", footvalue, highway);
@@ -298,7 +332,7 @@ class WayHandler : public osmium::handler::Handler {
 						writer.writeWay(L_WP, way, "redundant", "foot=%s on highway=%s is redundant - road is public", footvalue, highway);
 					} else if (taglist.has_key_value("foot", "private")) {
 						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - road is public", footvalue, highway);
-					} else if (taglist.has_key_value("foot", "customer")) {
+					} else if (taglist.has_key_value("foot", "customers")) {
 						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - road is public", footvalue, highway);
 					} else if (taglist.has_key_value("foot", "destination")) {
 						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - No way StVO can sign this", footvalue, highway);
@@ -385,7 +419,6 @@ class WayHandler : public osmium::handler::Handler {
 
 			// TODO - lanes = lanes:forward + lanes:backward should match
 			// TODO - turn:lanes / turn:lanes:forward / turn:lanes:backward must match lanes number
-
 
 			if (!taglist.highway_may_have_ref()) {
 				if (!taglist.has_key_value("highway", "path")) {
