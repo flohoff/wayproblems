@@ -1,6 +1,7 @@
 #include <cstdlib>  // for std::exit
 #include <cstring>  // for std::strcmp
 #include <iostream> // for std::cout, std::cerr
+#include <limits>     // for Nan
 
 // For the DynamicHandler class
 #include <osmium/dynamic_handler.hpp>
@@ -173,6 +174,20 @@ class extendedTagList  {
 			return string_in_list(value, list);
 		}
 
+		double key_value_as_double(const char *key) {
+			double result=std::numeric_limits<double>::quiet_NaN();
+			try {
+				result=std::stof(get_value_by_key(key), nullptr);
+			} catch(std::invalid_argument) {
+			}
+			std::cerr << "orig " << get_value_by_key(key) << " std stof " << result << std::endl;
+			return result;
+		}
+
+		bool key_value_is_double(const char *key) {
+			return !std::isnan(key_value_as_double(key));
+		}
+
 		bool highway_should_have_ref() {
 			return string_in_list(get_value_by_key("highway"), highway_should_have_ref_list);
 		}
@@ -277,6 +292,7 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
+
 			if (taglist.has_key("bicycle")) {
 				const char *bikevalue=taglist.get_value_by_key("bicycle");
 
@@ -362,13 +378,11 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
-
 			/*
 			 * Maxspeed
 			 *
 			 */
 
-			/* TODO - Add validating unit - kmh, mph, knots */
 			const std::vector<const char *>	maxspeedtags={ "maxspeed", "maxspeed:forward", "maxspeed:backward" };
 			for(auto key : maxspeedtags) {
 				if (taglist.has_key(key)) {
@@ -380,6 +394,9 @@ class WayHandler : public osmium::handler::Handler {
 									key, taglist.get_value_by_key(key));
 						}
 					}
+					// TODO - Integer/Decimal/Float?
+					// TODO - mph/knots/kmh
+					// TODO - > 120?
 				}
 			}
 
@@ -388,6 +405,30 @@ class WayHandler : public osmium::handler::Handler {
 					 || taglist.has_key("maxspeed:backward")
 					)) {
 				writer.writeWay(L_WP, way, "default", "maxspeed and maxspeed:forward/backward - overlapping values");
+			}
+
+			/*
+			 * Maxheight
+			 */
+			if (taglist.has_key("maxheight")) {
+				if (!taglist.key_value_in_list("maxheight", { "default", "none", "unsigned", "no_sign", "no_indications", "below_default" })) {
+					if (!taglist.key_value_is_double("maxheight")) {
+						writer.writeWay(L_WP, way, "default", "maxheight=%s is not float",
+							taglist.get_value_by_key("maxheight"));
+					} else {
+						double maxheight=taglist.key_value_as_double("maxheight");
+						if (maxheight < 1.8) {
+							// https://www.openstreetmap.org/way/25048948
+							writer.writeWay(L_WP, way, "default", "maxheight=%s is less than 1.8",
+								taglist.get_value_by_key("maxheight"));
+							// TODO - Maxheight for general traffic - parking access might be lower
+						} else if (maxheight > 7) {
+							// https://www.openstreetmap.org/way/25363727
+							writer.writeWay(L_WP, way, "default", "maxheight=%s is more than 7 - suspicous value",
+								taglist.get_value_by_key("maxheight"));
+						}
+					}
+				}
 			}
 
 
