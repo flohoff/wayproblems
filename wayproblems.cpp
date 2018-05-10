@@ -270,11 +270,8 @@ class WayHandler : public osmium::handler::Handler {
 						writer.writeWay(L_WP, way, "default", "highway=%s and sidewalk=%s - most likely an error",
 							taglist.get_value_by_key("highway"),taglist.get_value_by_key("sidewalk"));
 					}
-				}
-
-				/* sidewalk on motorroad */
-				if (taglist.key_value_is_true("motorroad")) {
-					if (taglist.key_value_in_list("sidewalk", { "both", "left", "right", "yes" })) {
+					/* sidewalk on motorroad */
+					if (taglist.key_value_is_true("motorroad")) {
 						writer.writeWay(L_WP, way, "default", "motorroad=%s and sidewalk=%s - most likely an error",
 							taglist.get_value_by_key("motorroad"),taglist.get_value_by_key("sidewalk"));
 					}
