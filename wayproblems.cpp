@@ -662,17 +662,12 @@ class WayHandler : public osmium::handler::Handler {
 						"steps", "minor", "path" })) {
 					writer.writeWay(L_WP, way, "default", "construction=%s not in known list", taglist.get_value_by_key("construction"));
 				} else {
-
 					if (!taglist.has_key_value("highway", "construction")) {
 						writer.writeWay(L_WP, way, "default", "construction=%s on highway=%s",
 								taglist.get_value_by_key("highway"),
 								taglist.get_value_by_key("construction"));
 					}
 				}
-			}
-
-			if (taglist.key_value_is_false("construction")) {
-				writer.writeWay(L_WP, way, "redundant", "construction=no ist redundant");
 			}
 
 			if (taglist.key_value_is_false("oneway")) {
@@ -688,6 +683,14 @@ class WayHandler : public osmium::handler::Handler {
 				}
 				if (taglist.has_key("oneway")) {
 					writer.writeWay(L_WP, way, "redundant", "oneway on roundabout is redundant");
+				}
+				if (taglist.key_value_in_list("sidewalk", { "both", "yes", "left" })) {
+					writer.writeWay(L_WP, way, "default", "sidewalk=%s on roundabout - Right hand drive countries should have only a right sidewalk",
+							taglist.get_value_by_key("sidewalk"));
+				}
+				if (taglist.key_value_in_list("cycleway", { "opposite", "opposite_lane", "opposite_track" })) {
+					writer.writeWay(L_WP, way, "default", "cycleway=%s on roundabout is broken",
+							taglist.get_value_by_key("cycleway"));
 				}
 			}
 		}
