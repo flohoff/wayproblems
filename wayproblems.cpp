@@ -180,7 +180,6 @@ class extendedTagList  {
 				result=std::stof(get_value_by_key(key), nullptr);
 			} catch(std::invalid_argument) {
 			}
-			std::cerr << "orig " << get_value_by_key(key) << " std stof " << result << std::endl;
 			return result;
 		}
 
