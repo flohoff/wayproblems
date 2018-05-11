@@ -322,6 +322,7 @@ class WayHandler : public osmium::handler::Handler {
 					if (taglist.key_value_is_true("bicycle")) {
 						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken", bikevalue, highway);
 					}
+					// TODO - permissive or any "allowing" tag is also broken
 				}
 
 				if (!taglist.key_value_in_list("bicycle", { "yes", "no", "private", "permissive",
@@ -648,9 +649,33 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.key_value_is_false("tunnel")) {
 				writer.writeWay(L_WP, way, "redundant", "tunnel=no ist redundant");
 			}
+
+			if (taglist.has_key("construction")) {
+				if (taglist.has_key_value("construction", "yes")) {
+					writer.writeWay(L_WP, way, "redundant", "construction=yes is deprecated");
+				} else if (taglist.has_key_value("construction", "no")) {
+					writer.writeWay(L_WP, way, "redundant", "construction=no is redundant");
+				} else if (!taglist.key_value_in_list("construction", {
+						"motorway", "motorway_link", "trunk", "trunk_link",
+						"primary", "primary_link", "secondary", "secondary_link",
+						"tertiary", "tertiary_link", "unclassified",
+						"residential", "pedestrian", "service", "track", "cycleway", "footway",
+						"steps", "minor", "path" })) {
+					writer.writeWay(L_WP, way, "default", "construction=%s not in known list", taglist.get_value_by_key("construction"));
+				} else {
+
+					if (!taglist.has_key_value("highway", "construction")) {
+						writer.writeWay(L_WP, way, "default", "construction=%s on highway=%s",
+								taglist.get_value_by_key("highway"),
+								taglist.get_value_by_key("construction"));
+					}
+				}
+			}
+
 			if (taglist.key_value_is_false("construction")) {
 				writer.writeWay(L_WP, way, "redundant", "construction=no ist redundant");
 			}
+
 			if (taglist.key_value_is_false("oneway")) {
 				writer.writeWay(L_WP, way, "redundant", "oneway=no ist redundant");
 			}
