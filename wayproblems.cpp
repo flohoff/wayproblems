@@ -472,10 +472,11 @@ class WayHandler : public osmium::handler::Handler {
 			const std::vector<const char *>	lanetags={ "lanes", "lanes:forward", "lanes:backward" };
 			for(auto key : lanetags) {
 				if (taglist.has_key(key)) {
-					try {
-						int lanes=std::stoi(taglist.get_value_by_key(key), nullptr, 10);
-
-						// TODO - Did we convert the whole number
+					if (!taglist.key_value_is_int(key)) {
+						writer.writeWay(L_WP, way, "default", "%s=%s is not integer",
+								key, taglist.get_value_by_key(key));
+					} else {
+						int lanes=taglist.key_value_as_int(key);
 
 						if (lanes<=0) {
 							writer.writeWay(L_WP, way, "default", "%s=%s is less or equal 0",
@@ -484,14 +485,23 @@ class WayHandler : public osmium::handler::Handler {
 							writer.writeWay(L_WP, way, "default", "%s=%s is more than 8 - suspicious value",
 									key, taglist.get_value_by_key(key));
 						}
-					} catch(std::invalid_argument) {
-						writer.writeWay(L_WP, way, "default", "%s=%s is not numerical",
-								key, taglist.get_value_by_key(key));
 					}
+				}
+
+			}
+
+			if (taglist.has_key("lanes") && taglist.has_key("lanes:forward") && taglist.has_key("lanes:backward")) {
+
+				int lanes=taglist.key_value_as_int("lanes");
+				int lanesfwd=taglist.key_value_as_int("lanes:forward");
+				int lanesbck=taglist.key_value_as_int("lanes:backward");
+
+				if (lanes != (lanesfwd + lanesbck)) {
+					writer.writeWay(L_WP, way, "default", "lanes=%d does not match sum of lanes:backward=%d and lanes:forward=%d",
+							lanes, lanesfwd, lanesbck);
 				}
 			}
 
-			// TODO - lanes = lanes:forward + lanes:backward should match
 			// TODO - turn:lanes / turn:lanes:forward / turn:lanes:backward must match lanes number
 
 			if (!taglist.highway_may_have_ref()) {
