@@ -491,6 +491,8 @@ class WayHandler : public osmium::handler::Handler {
 					}
 				}
 
+				// TODO - if there is only lanes + lanes:forward we calculate lanes:backward and vice versa
+
 				std::vector<const char *>	lanekeypreps={ "turn:", "destination:" };
 				for(auto lanekeyprep : lanekeypreps) {
 					std::string	lanekey=lanekeyprep;
@@ -559,17 +561,39 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
-			if (taglist.has_key("oneway") && !taglist.key_value_in_list("oneway", { "true", "yes", "1", "-1" })) {
+			/* Elements which only make sense on ANY oneway */
+			if (!taglist.has_key("oneway") || taglist.key_value_in_list("oneway", { "0", "no" })) {
 				std::vector<const char *>	lanekey={ "turn:lanes", "destination", "destination:lanes" };
 				for(auto key : lanekey) {
 					if (taglist.has_key(key)) {
 						writer.writeWay(L_WP, way, "default", "%s makes only sense on oneway streets", key);
 					}
 				}
-				// TODO - oneway=true/1/yes -> turn:lanes:backward and vice versa
-				// TODO - oneway=true/1/yes -> destination:backward / destination:lanes:backward
 			}
 
+			if (taglist.has_key("oneway")) {
+				/* Elements which dont make sense on oneway in ways direction*/
+				if (taglist.key_value_in_list("oneway", { "true", "yes", "1" })) {
+					std::vector<const char *>	keys={ "turn:lanes:backward", "destination:backward", "destination:lanes:backward", "maxspeed:backward" };
+					for(auto key : keys) {
+						if (taglist.has_key(key)) {
+							writer.writeWay(L_WP, way, "default", "%s on oneway=%s makes no sense",
+								key, taglist.get_value_by_key("oneway"));
+						}
+					}
+				}
+
+				/* Elements which dont make sense on reversed oneway */
+				if (taglist.key_value_in_list("oneway", { "-1" })) {
+					std::vector<const char *>	keys={ "turn:lanes:forward", "destination:forward", "destination:lanes:forward", "maxspeed:forward" };
+					for(auto key : keys) {
+						if (taglist.has_key(key)) {
+							writer.writeWay(L_WP, way, "default", "%s on oneway=%s makes no sense",
+								key, taglist.get_value_by_key("oneway"));
+						}
+					}
+				}
+			}
 
 			if (!taglist.highway_may_have_ref()) {
 				if (!taglist.has_key_value("highway", "path")) {
