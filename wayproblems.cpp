@@ -572,7 +572,7 @@ class WayHandler : public osmium::handler::Handler {
 
 				std::vector<const char *>	cyclewaykeys={ "cycleway", "cycleway:left", "cycleway:right" };
 				for(auto key : cyclewaykeys) {
-					if (taglist.key_value_in_list(key, { "opposite", "opposite_lane" })) {
+					if (taglist.key_value_in_list(key, { "opposite", "opposite_lane", "opposite_track", "opposite_share_busway" })) {
 						writer.writeWay(L_WP, way, "default", "%s=%s makes only sense on oneway streets",
 								key, taglist.get_value_by_key(key));
 					}
