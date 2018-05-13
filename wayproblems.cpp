@@ -174,6 +174,7 @@ class extendedTagList  {
 			return string_in_list(value, list);
 		}
 
+
 		double key_value_as_double(const char *key) {
 			double result=std::numeric_limits<double>::quiet_NaN();
 			try {
@@ -185,6 +186,25 @@ class extendedTagList  {
 
 		bool key_value_is_double(const char *key) {
 			return !std::isnan(key_value_as_double(key));
+		}
+
+		int key_value_as_int(const char *key) {
+			int result=std::numeric_limits<int>::max();
+			try {
+				const char	*value=get_value_by_key(key);
+				size_t		pos;
+
+				result=std::stoi(value, &pos);
+
+				if (pos != strlen(value))
+					return std::numeric_limits<int>::max();
+			} catch(std::invalid_argument) {
+			}
+			return result;
+		}
+
+		bool key_value_is_int(const char *key) {
+			return key_value_as_int(key) != std::numeric_limits<int>::max();
 		}
 
 		bool highway_should_have_ref() {
@@ -243,6 +263,13 @@ class WayHandler : public osmium::handler::Handler {
 				return;
 			}
 
+			if (way.ends_have_same_id()) {
+				if (!taglist.has_key_value("area", "yes")
+					&& !taglist.has_key_value("junction", "roundabout")) {
+					writer.writeWay(L_STRANGE, way, "default", "Circular way without junction=roundabout");
+				}
+			}
+
 			if (taglist.highway_should_have_ref()) {
 				if (!taglist.has_key_value("junction", "roundabout")) {
 					if (!taglist.has_key("ref")) {
@@ -251,10 +278,19 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
-			if (taglist.has_key_value("layer", "0")) {
-				writer.writeWay(L_WP, way, "redundant", "layer=0 is redundant");
-				// TODO - Numerical layer not just "0"
-				// TODO - Unparsable layer information
+			if (taglist.has_key("layer")) {
+				if (!taglist.key_value_is_int("layer")) {
+					writer.writeWay(L_WP, way, "default", "layer=%s is not integer", taglist.get_value_by_key("layer"));
+				} else {
+					int layer=taglist.key_value_as_int("layer");
+					if (layer == 0) {
+						writer.writeWay(L_WP, way, "redundant", "layer=%s is default", taglist.get_value_by_key("layer"));
+					} else if (layer > 10) {
+						writer.writeWay(L_WP, way, "redundant", "layer=%s where num > 10 seems broken", taglist.get_value_by_key("layer"));
+					} else if (layer < -10) {
+						writer.writeWay(L_WP, way, "redundant", "layer=%s where num < -10 seems broken", taglist.get_value_by_key("layer"));
+					}
+				}
 			}
 
 			if (taglist.has_key("sidewalk")) {
