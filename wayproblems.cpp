@@ -530,6 +530,20 @@ class WayHandler : public osmium::handler::Handler {
 						}
 					}
 				}
+
+				// TODO turn:lanes are from left to right. So in in Germany the first element cant be
+				// right if one of the next elements is less than right as that means crossing lanes
+				//
+				// We might assign "turn rate" and the next element must have a lower or same turn rate
+				//
+				// reverse	-> 40
+				// sharp_left	-> 20
+				// left		-> 18
+				// slight_left	-> 16
+				// through	-> 10	none, merge_to_left, merge_to_right
+				// slight_right	->  8
+				// right	->  6
+				// sharp_right	->  4
 			}
 
 
