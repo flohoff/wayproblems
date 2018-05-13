@@ -356,15 +356,30 @@ class WayHandler : public osmium::handler::Handler {
 				}
 
 				if (taglist.key_value_in_list("highway", { "trunk", "trunk_link", "motorway", "motorway_link" })) {
-					if (taglist.key_value_is_true("bicycle")) {
+					if (taglist.key_value_in_list("bicycle", { "no", "0", "false" })) {
+						writer.writeWay(L_WP, way, "redundant", "bicycle=%s on highway=%s is redundant", bikevalue, highway);
+					} else {
 						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken", bikevalue, highway);
 					}
-					// TODO - permissive or any "allowing" tag is also broken
 				}
 
 				if (!taglist.key_value_in_list("bicycle", { "yes", "no", "private", "permissive",
 						"destination" , "designated", "use_sidepath", "dismount" })) {
 					writer.writeWay(L_STRANGE, way, "default", "bicycle=%s on highway=%s", bikevalue, highway);
+				}
+
+				if (taglist.has_key_value("highway", "cycleway")) {
+					if (taglist.key_value_in_list("bicycle", { "yes", "1", "true", "designated" })) {
+						writer.writeWay(L_WP, way, "redundant", "bicycle=%s on cycleway is redundant",
+								taglist.get_value_by_key("bicycle"));
+					}
+
+					if (taglist.key_value_in_list("bicycle", { "no", "0", "false", "private", "permissive",
+								"use_sidepath", "destination", "customers", "unknown", "lane",
+								"allowed", "limited",  })) {
+						writer.writeWay(L_WP, way, "default", "bicycle=%s on cycleway is broken",
+								taglist.get_value_by_key("bicycle"));
+					}
 				}
 			}
 
@@ -745,15 +760,6 @@ class WayHandler : public osmium::handler::Handler {
 			}
 
 			if (taglist.has_key_value("highway", "cycleway")) {
-				if (taglist.key_value_is_true("bicycle")) {
-					writer.writeWay(L_WP, way, "redundant", "bicycle=yes on cycleway is redundant");
-				}
-				if (taglist.key_value_is_false("bicycle")) {
-					writer.writeWay(L_WP, way, "default", "bicycle=no on cycleway is broken");
-				}
-				if (taglist.has_key_value("bicycle", "use_sidepath")) {
-					writer.writeWay(L_WP, way, "default", "bicycle=use_sidepath on cycleway is broken - should be on main road");
-				}
 				if (taglist.has_key_value("vehicle", "yes")) {
 					writer.writeWay(L_WP, way, "default", "vehicle=yes on cycleway is broken as its not a cycleway");
 				}
