@@ -29,6 +29,8 @@
 
 #include <gdalcpp.hpp>
 #include <boost/program_options.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
 
 // The type of index used. This must match the include file above
 using index_type = osmium::index::map::FlexMem<osmium::unsigned_object_id_type, osmium::Location>;
@@ -471,20 +473,21 @@ class WayHandler : public osmium::handler::Handler {
 			 */
 			const std::vector<const char *>	lanetags={ "lanes", "lanes:forward", "lanes:backward" };
 			for(auto key : lanetags) {
-				if (taglist.has_key(key)) {
-					if (!taglist.key_value_is_int(key)) {
-						writer.writeWay(L_WP, way, "default", "%s=%s is not integer",
-								key, taglist.get_value_by_key(key));
-					} else {
-						int lanes=taglist.key_value_as_int(key);
+				if (!taglist.has_key(key))
+					continue;
 
-						if (lanes<=0) {
-							writer.writeWay(L_WP, way, "default", "%s=%s is less or equal 0",
-									key, taglist.get_value_by_key(key));
-						} else if (lanes > 8) {
-							writer.writeWay(L_WP, way, "default", "%s=%s is more than 8 - suspicious value",
-									key, taglist.get_value_by_key(key));
-						}
+				if (!taglist.key_value_is_int(key)) {
+					writer.writeWay(L_WP, way, "default", "%s=%s is not integer",
+							key, taglist.get_value_by_key(key));
+				} else {
+					int lanes=taglist.key_value_as_int(key);
+
+					if (lanes<=0) {
+						writer.writeWay(L_WP, way, "default", "%s=%s is less or equal 0",
+								key, taglist.get_value_by_key(key));
+					} else if (lanes > 8) {
+						writer.writeWay(L_WP, way, "default", "%s=%s is more than 8 - suspicious value",
+								key, taglist.get_value_by_key(key));
 					}
 				}
 
@@ -493,7 +496,7 @@ class WayHandler : public osmium::handler::Handler {
 					std::string	lanekey=lanekeyprep;
 					lanekey.append(key);
 
-					if (taglist.has_key(key) && taglist.has_key(lanekey.c_str())) {
+					if (taglist.has_key(lanekey.c_str())) {
 						int lanes=taglist.key_value_as_int(key);
 						const char *tlanes=taglist.get_value_by_key(lanekey.c_str());
 						int num=0;
@@ -507,7 +510,28 @@ class WayHandler : public osmium::handler::Handler {
 						}
 					}
 				}
+
+				std::string			turnkey="turn:";
+				turnkey.append(key);
+
+				if (taglist.has_key(turnkey.c_str())) {
+					std::string			turnlanes=taglist.get_value_by_key(turnkey.c_str());
+					std::vector<std::string>	turnlanetypes;
+
+					boost::split(turnlanetypes, turnlanes, boost::is_any_of("|;"), boost::token_compress_on);
+
+					std::vector<std::string>	validturntypes={ "left", "right", "slight_left", "slight_right",
+						"through", "merge_to_left", "merge_to_right", "reverse", "none", "sharp_left", "sharp_right", "" };
+
+					for(auto turntype : turnlanetypes) {
+						if (find(validturntypes.begin(), validturntypes.end(), turntype) == validturntypes.end()) {
+							writer.writeWay(L_WP, way, "default", "%s=%s contains lane turn %s which is unknown",
+									key, turnlanes.c_str(), turntype.c_str());
+						}
+					}
+				}
 			}
+
 
 			if (taglist.has_key("lanes") && taglist.has_key("lanes:forward") && taglist.has_key("lanes:backward")) {
 
