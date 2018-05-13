@@ -488,6 +488,25 @@ class WayHandler : public osmium::handler::Handler {
 					}
 				}
 
+				std::vector<const char *>	lanekeypreps={ "turn:", "destination:" };
+				for(auto lanekeyprep : lanekeypreps) {
+					std::string	lanekey=lanekeyprep;
+					lanekey.append(key);
+
+					if (taglist.has_key(key) && taglist.has_key(lanekey.c_str())) {
+						int lanes=taglist.key_value_as_int(key);
+						const char *tlanes=taglist.get_value_by_key(lanekey.c_str());
+						int num=0;
+						while((tlanes=strstr(tlanes,"|")) != NULL) {
+							tlanes++;
+							num++;
+						}
+						if (lanes != (num+1)) {
+							writer.writeWay(L_WP, way, "default", "%s=%d does not match elements in %s=%s",
+									key, lanes, lanekey.c_str(), taglist.get_value_by_key(lanekey.c_str()));
+						}
+					}
+				}
 			}
 
 			if (taglist.has_key("lanes") && taglist.has_key("lanes:forward") && taglist.has_key("lanes:backward")) {
@@ -502,7 +521,17 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
-			// TODO - turn:lanes / turn:lanes:forward / turn:lanes:backward must match lanes number
+			if (taglist.has_key("oneway") && !taglist.key_value_in_list("oneway", { "true", "yes", "1", "-1" })) {
+				std::vector<const char *>	lanekey={ "turn:lanes", "destination", "destination:lanes" };
+				for(auto key : lanekey) {
+					if (taglist.has_key(key)) {
+						writer.writeWay(L_WP, way, "default", "%s makes only sense on oneway streets", key);
+					}
+				}
+				// TODO - oneway=true/1/yes -> turn:lanes:backward and vice versa
+				// TODO - oneway=true/1/yes -> destination:backward / destination:lanes:backward
+			}
+
 
 			if (!taglist.highway_may_have_ref()) {
 				if (!taglist.has_key_value("highway", "path")) {
