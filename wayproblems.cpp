@@ -621,6 +621,7 @@ class WayHandler : public osmium::handler::Handler {
 			}
 
 			// TODO - junction compare against list
+			// TODO - check for turn direction
 		}
 
 		void tag_bicycle(osmium::Way& way, extendedTagList& taglist) {
@@ -937,6 +938,19 @@ class WayHandler : public osmium::handler::Handler {
 			// TODO - surface
 			// TODO - smoothness
 			// TODO - incline
+			// TODO - overtaking
+			// TODO - trafic_calming (on ways)
+			// TODO - driving_side
+			// TODO - abutters
+			// TODO - maxspeed:conditional
+			// TODO - maxspeed:hgv...
+			// TODO - cycleway, cycleway:right, cycleway:left
+			// TODO - parking:lane
+			// TODO - lanes:both_ways!??
+			// TODO - maxaxleload
+			// TODO - maxlength
+			// TODO - maxwidth
+			// TODO - maxwidth:physical
 
 			tag_bicycle(way, taglist);
 			tag_foot(way, taglist);
@@ -950,6 +964,7 @@ class WayHandler : public osmium::handler::Handler {
 			// TODO - hgv
 			// TODO - forestry
 			// TODO - agricultural
+			// TODO - wheelchair
 
 			highway_road(way, taglist);
 			highway_footway(way, taglist);
@@ -958,6 +973,10 @@ class WayHandler : public osmium::handler::Handler {
 			highway_living_street(way, taglist);
 			highway_service(way, taglist);
 			highway_track(way, taglist);
+
+			// steps
+			// escalators
+			// pedestrian
 
 			if (taglist.is_public_road()) {
 				const std::vector<const char *>	accesstags={
