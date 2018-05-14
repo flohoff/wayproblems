@@ -383,6 +383,7 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
+
 			if (taglist.has_key("foot")) {
 				const char *footvalue=taglist.get_value_by_key("foot");
 
@@ -425,6 +426,18 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.has_key("shoulder")) {
 				if (!taglist.key_value_in_list("shoulder", { "both", "left", "right", "no", "yes" })) {
 					writer.writeWay(L_WP, way, "default", "shoulder=%s not in known value list", taglist.get_value_by_key("shoulder"));
+				}
+			}
+
+			if (taglist.has_key_value("highway", "path")) {
+				if (taglist.has_key("cycleway")) {
+					if (taglist.key_value_in_list("cycleway", { "shared", "track" })) {
+						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s tag should be on road or absent",
+								taglist.get_value_by_key("cycleway"));
+					} else {
+						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s is unknown value",
+								taglist.get_value_by_key("cycleway"));
+					}
 				}
 			}
 
