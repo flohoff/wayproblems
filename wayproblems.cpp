@@ -748,7 +748,7 @@ class WayHandler : public osmium::handler::Handler {
 					if (taglist.key_value_is_true(key)) {
 						writer.writeWay(L_WP, way, "default", "highway=path - %s=yes is suspicious - cant fit on single track path", key);
 					} else if (taglist.key_value_is_false(key)) {
-						writer.writeWay(L_WP, way, "redundant", "highway=path - %s=no is default", key);
+						writer.writeWay(L_DEFAULTS, way, "redundant", "highway=path - %s=no is default", key);
 					} else if (taglist.has_key_value(key, "permissive")) {
 						writer.writeWay(L_WP, way, "default", "highway=path - %s=permissive - cant fit on a single track path", key);
 					} else if (taglist.has_key_value(key, "private")) {
