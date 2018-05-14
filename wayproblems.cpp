@@ -44,7 +44,7 @@ enum layerid {
 	L_WP,
 	L_REF,
 	L_FOOTWAY,
-	L_DEFAULT,
+	L_DEFAULTS,
 	L_TRACK,
 	L_STRANGE,
 	layermax
@@ -68,7 +68,7 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 			layer[L_FOOTWAY]=addLineStringLayer("footway");
 			layer[L_STRANGE]=addLineStringLayer("strange");
 			layer[L_TRACK]=addLineStringLayer("track");
-			layer[L_DEFAULT]=addLineStringLayer("default");
+			layer[L_DEFAULTS]=addLineStringLayer("defaults");
 		}
 
 	gdalcpp::Layer *addLineStringLayer(const char *name) {
@@ -288,7 +288,7 @@ class WayHandler : public osmium::handler::Handler {
 				} else {
 					int layer=taglist.key_value_as_int("layer");
 					if (layer == 0) {
-						writer.writeWay(L_DEFAULT, way, "redundant", "layer=%s is default", taglist.get_value_by_key("layer"));
+						writer.writeWay(L_DEFAULTS, way, "redundant", "layer=%s is default", taglist.get_value_by_key("layer"));
 					} else if (layer > 10) {
 						writer.writeWay(L_WP, way, "redundant", "layer=%s where num > 10 seems broken", taglist.get_value_by_key("layer"));
 					} else if (layer < -10) {
@@ -339,9 +339,9 @@ class WayHandler : public osmium::handler::Handler {
 						"primary", "primary_link" })) {
 
 					if (taglist.key_value_is_true("bicycle")) {
-						writer.writeWay(L_DEFAULT, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
+						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
 					} else if (taglist.has_key_value("bicycle", "permissive")) {
-						writer.writeWay(L_DEFAULT, way, "redundant", "bicycle=designated on highway=%s is default - road is public", highway);
+						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=designated on highway=%s is default - road is public", highway);
 					} else if (taglist.has_key_value("bicycle", "private")) {
 						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken - road is public", bikevalue, highway);
 					} else if (taglist.has_key_value("bicycle", "customers")) {
@@ -353,13 +353,13 @@ class WayHandler : public osmium::handler::Handler {
 
 				if (taglist.key_value_in_list("highway", { "track", "service" })) {
 					if (taglist.key_value_is_true("bicycle")) {
-						writer.writeWay(L_DEFAULT, way, "redundant", "bicycle=%s on highway=%s is redundant", bikevalue, highway);
+						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is redundant", bikevalue, highway);
 					}
 				}
 
 				if (taglist.key_value_in_list("highway", { "trunk", "trunk_link", "motorway", "motorway_link" })) {
 					if (taglist.key_value_in_list("bicycle", { "no", "0", "false" })) {
-						writer.writeWay(L_DEFAULT, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
+						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
 					} else {
 						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken", bikevalue, highway);
 					}
@@ -382,7 +382,7 @@ class WayHandler : public osmium::handler::Handler {
 						"primary", "primary_link" })) {
 
 					if (taglist.key_value_is_true("foot")) {
-						writer.writeWay(L_DEFAULT, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
+						writer.writeWay(L_DEFAULTS, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
 					} else if (taglist.has_key_value("foot", "permissive")) {
 						writer.writeWay(L_WP, way, "default", "foot=yes on highway=%s is default - permissive on public road is broken", highway);
 					} else if (taglist.has_key_value("foot", "private")) {
@@ -396,7 +396,7 @@ class WayHandler : public osmium::handler::Handler {
 
 				if (taglist.key_value_in_list("highway", { "track", "service" })) {
 					if (taglist.key_value_is_true("foot")) {
-						writer.writeWay(L_DEFAULT, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
+						writer.writeWay(L_DEFAULTS, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
 					}
 				}
 
@@ -667,7 +667,7 @@ class WayHandler : public osmium::handler::Handler {
 				if (taglist.key_value_is_false("access")) {
 					writer.writeWay(L_WP, way, "default", "access=no - Nicht StVO konform. Vermutlich motor_vehicle=no oder vehicle=no");
 				} else if (taglist.key_value_is_true("access")) {
-					writer.writeWay(L_DEFAULT, way, "redundant", "access=yes is default");
+					writer.writeWay(L_DEFAULTS, way, "redundant", "access=yes is default");
 				} else if (taglist.has_key_value("access", "destination")) {
 					writer.writeWay(L_WP, way, "default", "access=destination nicht StVO konform. Vermutlich vehicle=destination oder motor_vehicle=destination");
 				}
@@ -713,7 +713,7 @@ class WayHandler : public osmium::handler::Handler {
 				}
 
 				if (taglist.key_value_is_true("foot")) {
-					writer.writeWay(L_DEFAULT, way, "redundant", "highway=footway with foot=yes is default");
+					writer.writeWay(L_DEFAULTS, way, "redundant", "highway=footway with foot=yes is default");
 					writer.writeWay(L_FOOTWAY, way, "redundant", "highway=footway with foot=yes is default");
 				} else if (taglist.key_value_is_false("foot")) {
 					writer.writeWay(L_WP, way, "default", "highway=footway with foot=no is broken");
@@ -737,7 +737,7 @@ class WayHandler : public osmium::handler::Handler {
 					if (taglist.key_value_is_false(key)) {
 						writer.writeWay(L_WP, way, "default", "living_street with %s=no is broken", key);
 					} else if (taglist.key_value_is_true(key)) {
-						writer.writeWay(L_DEFAULT, way, "redundant", "living_street with %s=yes is default", key);
+						writer.writeWay(L_DEFAULTS, way, "redundant", "living_street with %s=yes is default", key);
 					}
 				}
 			}
@@ -764,7 +764,7 @@ class WayHandler : public osmium::handler::Handler {
 				std::vector<const char *>	defno={ "motor_vehicle", "motorcar", "motorcycle", "hgv", "psv", "horse", "foot" };
 				for(auto key : defno) {
 					if (taglist.key_value_is_false(key)) {
-						writer.writeWay(L_DEFAULT, way, "redundant", "%s=%s on cycleway is default",
+						writer.writeWay(L_DEFAULTS, way, "redundant", "%s=%s on cycleway is default",
 								key, taglist.get_value_by_key(key));
 					}
 				}
@@ -773,7 +773,7 @@ class WayHandler : public osmium::handler::Handler {
 				}
 
 				if (taglist.key_value_in_list("bicycle", { "designated" })) {
-					writer.writeWay(L_DEFAULT, way, "redundant", "bicycle=%s on cycleway is default",
+					writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on cycleway is default",
 							taglist.get_value_by_key("bicycle"));
 				}
 
@@ -789,7 +789,7 @@ class WayHandler : public osmium::handler::Handler {
 				if (taglist.key_value_is_false("motor_vehicle")) {
 					writer.writeWay(L_WP, way, "default", "vehicle=yes and motor_vehicle=no should be bicyle");
 				} else if (taglist.key_value_is_true("motor_vehicle")) {
-					writer.writeWay(L_DEFAULT, way, "redundant", "vehicle=yes includes motor_vehicle=yes");
+					writer.writeWay(L_DEFAULTS, way, "redundant", "vehicle=yes includes motor_vehicle=yes");
 				}
 			}
 
@@ -797,31 +797,31 @@ class WayHandler : public osmium::handler::Handler {
 				if (taglist.key_value_is_false("motorcycle")) {
 					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and motorcycle=no should be motorcar + hgv");
 				} else if (taglist.key_value_is_true("motorcycle")) {
-					writer.writeWay(L_DEFAULT, way, "redundant", "motor_vehicle=yes includes motorcycle=yes");
+					writer.writeWay(L_DEFAULTS, way, "redundant", "motor_vehicle=yes includes motorcycle=yes");
 				}
 
 				if (taglist.key_value_is_false("motorcar")) {
 					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and motorcar=no should be motorcycle");
 				} else if (taglist.key_value_is_true("motorcar")) {
-					writer.writeWay(L_DEFAULT, way, "redundant", "motor_vehicle=yes includes motorcar=yes");
+					writer.writeWay(L_DEFAULTS, way, "redundant", "motor_vehicle=yes includes motorcar=yes");
 				}
 
 				if (taglist.key_value_is_false("hgv")) {
 					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and hgv=no should be motorcar");
 				} else if (taglist.key_value_is_true("hgv")) {
-					writer.writeWay(L_DEFAULT, way, "redundant", "motor_vehicle=yes includes hgv=yes");
+					writer.writeWay(L_DEFAULTS, way, "redundant", "motor_vehicle=yes includes hgv=yes");
 				}
 			}
 
 			if (taglist.key_value_is_false("tunnel")) {
-				writer.writeWay(L_DEFAULT, way, "redundant", "tunnel=no ist default");
+				writer.writeWay(L_DEFAULTS, way, "redundant", "tunnel=no ist default");
 			}
 
 			if (taglist.has_key("construction")) {
 				if (taglist.has_key_value("construction", "yes")) {
 					writer.writeWay(L_WP, way, "redundant", "construction=yes is deprecated");
 				} else if (taglist.has_key_value("construction", "no")) {
-					writer.writeWay(L_DEFAULT, way, "redundant", "construction=no is default");
+					writer.writeWay(L_DEFAULTS, way, "redundant", "construction=no is default");
 				} else if (!taglist.key_value_in_list("construction", {
 						"motorway", "motorway_link", "trunk", "trunk_link",
 						"primary", "primary_link", "secondary", "secondary_link",
@@ -839,7 +839,7 @@ class WayHandler : public osmium::handler::Handler {
 			}
 
 			if (taglist.key_value_is_false("oneway")) {
-				writer.writeWay(L_DEFAULT, way, "redundant", "oneway=no is default");
+				writer.writeWay(L_DEFAULTS, way, "redundant", "oneway=no is default");
 			}
 
 			if (taglist.has_key_value("junction", "roundabout")) {
@@ -850,7 +850,7 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_WP, way, "default", "ref on roundabout is most like an error");
 				}
 				if (taglist.has_key("oneway")) {
-					writer.writeWay(L_DEFAULT, way, "redundant", "oneway on roundabout is default");
+					writer.writeWay(L_DEFAULTS, way, "redundant", "oneway on roundabout is default");
 				}
 				if (taglist.key_value_in_list("sidewalk", { "both", "yes", "left" })) {
 					writer.writeWay(L_WP, way, "default", "sidewalk=%s on roundabout - Right hand drive countries should have only a right sidewalk",
