@@ -272,6 +272,10 @@ class WayHandler : public osmium::handler::Handler {
 					&& !taglist.has_key_value("junction", "roundabout")) {
 					writer.writeWay(L_STRANGE, way, "default", "Circular way without junction=roundabout");
 				}
+			} else {
+				if (taglist.has_key_value("area", "yes")) {
+					writer.writeWay(L_WP, way, "default", "area=yes on unclosed way");
+				}
 			}
 
 			if (taglist.highway_should_have_ref()) {
