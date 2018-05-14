@@ -660,7 +660,7 @@ class WayHandler : public osmium::handler::Handler {
 			}
 
 			if (taglist.has_key("goods")) {
-				writer.writeWay(L_WP, way, "default", "goods=* is not in use in Germany - no distinction between goods and hgv");
+				writer.writeWay(L_WP, way, "default", "goods=* is not in use in Germany - did you mean hgv=");
 			}
 
 			if (taglist.has_key("access")) {
