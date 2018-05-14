@@ -586,32 +586,45 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
-		void highway_road(osmium::Way& way, extendedTagList& taglist) {
-			if (taglist.has_key_value("highway", "road")) {
-				writer.writeWay(L_WP, way, "default", "highway=road is only a temporary tagging for sat imagery based mapping");
+		void tag_tracktype(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key_value("highway", "track")
+					&& taglist.has_key("tracktype")) {
+				writer.writeWay(L_WP, way, "default", "tracktype=* on non track");
 			}
 		}
 
-		void way(osmium::Way& way) {
-			extendedTagList	taglist(way.tags());
-			const char *highway=taglist.get_value_by_key("highway");
+		void tag_tunnel(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.key_value_is_false("tunnel")) {
+				writer.writeWay(L_DEFAULTS, way, "redundant", "tunnel=no ist default");
+			}
+		}
 
-			if (!taglist.has_key("highway")) {
-				return;
+		void tag_junction(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key_value("junction", "roundabout")) {
+				if (taglist.has_key("name")) {
+					writer.writeWay(L_WP, way, "default", "name on roundabout is most like an error");
+				}
+				if (taglist.has_key("ref")) {
+					writer.writeWay(L_WP, way, "default", "ref on roundabout is most like an error");
+				}
+				if (taglist.has_key("oneway")) {
+					writer.writeWay(L_DEFAULTS, way, "redundant", "oneway on roundabout is default");
+				}
+				if (taglist.key_value_in_list("sidewalk", { "both", "yes", "left" })) {
+					writer.writeWay(L_WP, way, "default", "sidewalk=%s on roundabout - Right hand drive countries should have only a right sidewalk",
+							taglist.get_value_by_key("sidewalk"));
+				}
+				if (taglist.key_value_in_list("cycleway", { "opposite", "opposite_lane", "opposite_track" })) {
+					writer.writeWay(L_WP, way, "default", "cycleway=%s on roundabout is broken",
+							taglist.get_value_by_key("cycleway"));
+				}
 			}
 
-			circular_way(way, taglist);
-			tag_layer(way, taglist);
-			tag_ref(way, taglist);
-			tag_maxspeed(way, taglist);
-			tag_maxheight(way, taglist);
-			tag_lanes(way, taglist);
-			tag_sidewalk(way, taglist);
-			tag_segregated(way, taglist);
-			tag_shoulder(way, taglist);
-			tag_oneway(way, taglist);
-			tag_construction(way, taglist);
-			highway_road(way, taglist);
+			// TODO - junction compare against list
+		}
+
+		void tag_bicycle(osmium::Way& way, extendedTagList& taglist) {
+			const char *highway=taglist.get_value_by_key("highway");
 
 			if (taglist.has_key("bicycle")) {
 				const char *bikevalue=taglist.get_value_by_key("bicycle");
@@ -654,7 +667,10 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_STRANGE, way, "default", "bicycle=%s on highway=%s", bikevalue, highway);
 				}
 			}
+		}
 
+		void tag_foot(osmium::Way& way, extendedTagList& taglist) {
+			const char *highway=taglist.get_value_by_key("highway");
 			if (taglist.has_key("foot")) {
 				const char *footvalue=taglist.get_value_by_key("foot");
 
@@ -693,52 +709,31 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_STRANGE, way, "default", "foot=%s on highway=%s", footvalue, highway);
 				}
 			}
+		}
 
-
-			if (taglist.has_key_value("highway", "path")) {
-				if (taglist.has_key("cycleway")) {
-					if (taglist.key_value_in_list("cycleway", { "shared", "track" })) {
-						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s tag should be on road or absent",
-								taglist.get_value_by_key("cycleway"));
-					} else {
-						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s is unknown value",
-								taglist.get_value_by_key("cycleway"));
-					}
-				}
-			}
-
-			if (taglist.is_public_road()) {
-				const std::vector<const char *>	accesstags={
-					"access", "vehicle", "motor_vehicle", "motorcycle",
-					"motorcar", "hgv", "psv",
-					"goods", "mofa", "moped", "horse"};
-
-				for(auto key : accesstags) {
-					const char *value=taglist.get_value_by_key(key);
-					const char *highway=taglist.get_value_by_key("highway");
-
-					if (!value)
-						continue;
-
-					if (!strcmp(value, "permissive")) {
-						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=permissive access tags", highway, key);
-					} else if (!strcmp(value, "private")) {
-						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=private access tags", highway, key);
-					} else if (!strcmp(value, "customers")) {
-						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=customers access tags", highway, key);
-					}
+		void tag_motor_vehicle(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.key_value_is_true("motor_vehicle")) {
+				if (taglist.key_value_is_false("motorcycle")) {
+					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and motorcycle=no should be motorcar + hgv");
+				} else if (taglist.key_value_is_true("motorcycle")) {
+					writer.writeWay(L_DEFAULTS, way, "redundant", "motor_vehicle=yes includes motorcycle=yes");
 				}
 
+				if (taglist.key_value_is_false("motorcar")) {
+					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and motorcar=no should be motorcycle");
+				} else if (taglist.key_value_is_true("motorcar")) {
+					writer.writeWay(L_DEFAULTS, way, "redundant", "motor_vehicle=yes includes motorcar=yes");
+				}
 
-				if (taglist.has_key_value("cycleway", "track") && taglist.has_key_value("bicycle", "use_sidepath")) {
-					writer.writeWay(L_WP, way, "default", "cycleway=track and bicycle=use_sidepath on road is broken as there is no seperate cycleway");
+				if (taglist.key_value_is_false("hgv")) {
+					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and hgv=no should be motorcar");
+				} else if (taglist.key_value_is_true("hgv")) {
+					writer.writeWay(L_DEFAULTS, way, "redundant", "motor_vehicle=yes includes hgv=yes");
 				}
 			}
+		}
 
-			if (taglist.has_key("goods")) {
-				writer.writeWay(L_WP, way, "default", "goods=* is not in use in Germany - did you mean hgv=");
-			}
-
+		void tag_access(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key("access")) {
 				if (taglist.key_value_is_false("access")) {
 					writer.writeWay(L_WP, way, "default", "access=no - Nicht StVO konform. Vermutlich motor_vehicle=no oder vehicle=no");
@@ -748,72 +743,63 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_WP, way, "default", "access=destination nicht StVO konform. Vermutlich vehicle=destination oder motor_vehicle=destination");
 				}
 			}
+		}
 
-			if (taglist.has_key_value("highway", "service")) {
-				if (taglist.has_key("name")) {
-					writer.writeWay(L_WP, way, "default", "highway=service with name=* is suspicious - Either public e.g. not service or name tag abuse");
-				}
-			} else {
-				if (taglist.has_key("service")) {
-					writer.writeWay(L_WP, way, "default", "service=%s on non service highway", taglist.get_value_by_key("service"));
+		void tag_goods(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key("goods")) {
+				writer.writeWay(L_WP, way, "default", "goods=* is not in use in Germany - did you mean hgv=");
+			}
+		}
+
+		void tag_vehicle(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.key_value_is_true("vehicle")) {
+				if (taglist.key_value_is_false("motor_vehicle")) {
+					writer.writeWay(L_WP, way, "default", "vehicle=yes and motor_vehicle=no should be bicyle");
+				} else if (taglist.key_value_is_true("motor_vehicle")) {
+					writer.writeWay(L_DEFAULTS, way, "redundant", "vehicle=yes includes motor_vehicle=yes");
 				}
 			}
+		}
 
-			if (taglist.has_key_value("highway", "track")) {
-				if (taglist.has_key("name")) {
-					writer.writeWay(L_TRACK, way, "default", "highway=track with name is suspicious - probably not track");
-				}
-				if (taglist.has_key("maxspeed")) {
-					writer.writeWay(L_TRACK, way, "default", "highway=track with maxspeed is suspicious - probably not track");
-				}
+		void highway_road(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key_value("highway", "road")) {
+				writer.writeWay(L_WP, way, "default", "highway=road is only a temporary tagging for sat imagery based mapping");
+			}
+		}
 
-				std::vector<const char *>	defaultno={ "motorcycle", "motorcar", "hgv", "psv", "motor_vehicle", "vehicle" };
-				for(auto key : defaultno) {
-					if (taglist.key_value_is_false(key)) {
-						writer.writeWay(L_TRACK, way, "default", "highway=track - %s=no is suspicious - should be agricutural or empty", key);
-					}
-				}
-			} else {
-				if (taglist.has_key("tracktype"))
-					writer.writeWay(L_WP, way, "default", "tracktype=* on non track");
+		void highway_footway(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key_value("highway", "footway"))
+				return;
+
+			if (!taglist.has_key("bicycle")) {
+				writer.writeWay(L_FOOTWAY, way, "footway", "highway=footway without bicycle=yes/no tag - suspicious combination");
 			}
 
-			if (taglist.has_key_value("highway", "footway")) {
-				if (!taglist.has_key("bicycle")) {
-					writer.writeWay(L_FOOTWAY, way, "footway", "highway=footway without bicycle=yes/no tag - suspicious combination");
-				}
-
-				if (taglist.has_key_value("bicycle", "use_sidepath")) {
-					writer.writeWay(L_WP, way, "default", "bicycle=use_sidepath on cycleway is broken - should be on main road");
-					writer.writeWay(L_FOOTWAY, way, "default", "bicycle=use_sidepath on cycleway is broken - should be on main road");
-				}
-
-				if (taglist.key_value_is_true("foot")) {
-					writer.writeWay(L_DEFAULTS, way, "redundant", "highway=footway with foot=yes is default");
-					writer.writeWay(L_FOOTWAY, way, "redundant", "highway=footway with foot=yes is default");
-				} else if (taglist.key_value_is_false("foot")) {
-					writer.writeWay(L_WP, way, "default", "highway=footway with foot=no is broken");
-					writer.writeWay(L_FOOTWAY, way, "default", "highway=footway with foot=no is broken");
-				}
-
-				/* TODO What about other access types vehicle/motor_vehicle/hgv/goods? yes/designated etc */
+			if (taglist.has_key_value("bicycle", "use_sidepath")) {
+				writer.writeWay(L_WP, way, "default", "bicycle=use_sidepath on cycleway is broken - should be on main road");
+				writer.writeWay(L_FOOTWAY, way, "default", "bicycle=use_sidepath on cycleway is broken - should be on main road");
 			}
 
-			if (taglist.has_key_value("highway", "living_street")) {
-				if (taglist.has_key("maxspeed")) {
-					writer.writeWay(L_WP, way, "default", "maxspeed on living_street is broken - neither numeric nor walk is correct");
-				}
+			if (taglist.key_value_is_true("foot")) {
+				writer.writeWay(L_DEFAULTS, way, "redundant", "highway=footway with foot=yes is default");
+				writer.writeWay(L_FOOTWAY, way, "redundant", "highway=footway with foot=yes is default");
+			} else if (taglist.key_value_is_false("foot")) {
+				writer.writeWay(L_WP, way, "default", "highway=footway with foot=no is broken");
+				writer.writeWay(L_FOOTWAY, way, "default", "highway=footway with foot=no is broken");
+			}
 
-				if (taglist.has_key_value("bicycle", "use_sidepath")) {
-					writer.writeWay(L_WP, way, "default", "bicycle=use_sidepath on living_street is broken - living_street explicitly includes bicycles");
-				}
+			/* TODO What about other access types vehicle/motor_vehicle/hgv/goods? yes/designated etc */
+		}
 
-				std::vector<const char *>	defaultyes={ "vehicle" };
-				for(auto key : defaultyes) {
-					if (taglist.key_value_is_false(key)) {
-						writer.writeWay(L_WP, way, "default", "living_street with %s=no is broken", key);
-					} else if (taglist.key_value_is_true(key)) {
-						writer.writeWay(L_DEFAULTS, way, "redundant", "living_street with %s=yes is default", key);
+		void highway_path(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key_value("highway", "path")) {
+				if (taglist.has_key("cycleway")) {
+					if (taglist.key_value_in_list("cycleway", { "shared", "track" })) {
+						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s tag should be on road or absent",
+								taglist.get_value_by_key("cycleway"));
+					} else {
+						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s is unknown value",
+								taglist.get_value_by_key("cycleway"));
 					}
 				}
 			}
@@ -835,8 +821,62 @@ class WayHandler : public osmium::handler::Handler {
 				}
 				/* Broken tags - hazmat=no/yes bullshit */
 			}
+		}
 
+		void highway_service(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key_value("highway", "service")) {
+				if (taglist.has_key("name")) {
+					writer.writeWay(L_WP, way, "default", "highway=service with name=* is suspicious - Either public e.g. not service or name tag abuse");
+				}
+			} else {
+				if (taglist.has_key("service")) {
+					writer.writeWay(L_WP, way, "default", "service=%s on non service highway", taglist.get_value_by_key("service"));
+				}
+			}
+		}
+
+		void highway_living_street(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key_value("highway", "living_street")) {
+				if (taglist.has_key("maxspeed")) {
+					writer.writeWay(L_WP, way, "default", "maxspeed on living_street is broken - neither numeric nor walk is correct");
+				}
+
+				if (taglist.has_key_value("bicycle", "use_sidepath")) {
+					writer.writeWay(L_WP, way, "default", "bicycle=use_sidepath on living_street is broken - living_street explicitly includes bicycles");
+				}
+
+				std::vector<const char *>	defaultyes={ "vehicle" };
+				for(auto key : defaultyes) {
+					if (taglist.key_value_is_false(key)) {
+						writer.writeWay(L_WP, way, "default", "living_street with %s=no is broken", key);
+					} else if (taglist.key_value_is_true(key)) {
+						writer.writeWay(L_DEFAULTS, way, "redundant", "living_street with %s=yes is default", key);
+					}
+				}
+			}
+		}
+
+		void highway_track(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key_value("highway", "track")) {
+				if (taglist.has_key("name")) {
+					writer.writeWay(L_TRACK, way, "default", "highway=track with name is suspicious - probably not track");
+				}
+				if (taglist.has_key("maxspeed")) {
+					writer.writeWay(L_TRACK, way, "default", "highway=track with maxspeed is suspicious - probably not track");
+				}
+
+				std::vector<const char *>	defaultno={ "motorcycle", "motorcar", "hgv", "psv", "motor_vehicle", "vehicle" };
+				for(auto key : defaultno) {
+					if (taglist.key_value_is_false(key)) {
+						writer.writeWay(L_TRACK, way, "default", "highway=track - %s=no is suspicious - should be agricutural or empty", key);
+					}
+				}
+			}
+		}
+
+		void highway_cycleway(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key_value("highway", "cycleway")) {
+
 				std::vector<const char *>	defno={ "motor_vehicle", "motorcar", "motorcycle", "hgv", "psv", "horse", "foot" };
 				for(auto key : defno) {
 					if (taglist.key_value_is_false(key)) {
@@ -844,6 +884,7 @@ class WayHandler : public osmium::handler::Handler {
 								key, taglist.get_value_by_key(key));
 					}
 				}
+
 				if (taglist.has_key_value("vehicle", "no")) {
 					writer.writeWay(L_WP, way, "default", "vehicle=no on cycleway is broken as bicycle is a vehicle");
 				}
@@ -859,57 +900,85 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_WP, way, "default", "bicycle=%s on cycleway is broken",
 							taglist.get_value_by_key("bicycle"));
 				}
-			}
 
-			if (taglist.key_value_is_true("vehicle")) {
-				if (taglist.key_value_is_false("motor_vehicle")) {
-					writer.writeWay(L_WP, way, "default", "vehicle=yes and motor_vehicle=no should be bicyle");
-				} else if (taglist.key_value_is_true("motor_vehicle")) {
-					writer.writeWay(L_DEFAULTS, way, "redundant", "vehicle=yes includes motor_vehicle=yes");
+				if (taglist.has_key_value("bicycle", "use_sidepath")) {
+					writer.writeWay(L_WP, way, "default", "cycleway=track and bicycle=use_sidepath on road is broken as there is no seperate cycleway");
 				}
 			}
+		}
 
-			if (taglist.key_value_is_true("motor_vehicle")) {
-				if (taglist.key_value_is_false("motorcycle")) {
-					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and motorcycle=no should be motorcar + hgv");
-				} else if (taglist.key_value_is_true("motorcycle")) {
-					writer.writeWay(L_DEFAULTS, way, "redundant", "motor_vehicle=yes includes motorcycle=yes");
-				}
+		void way(osmium::Way& way) {
+			extendedTagList	taglist(way.tags());
+			const char *highway=taglist.get_value_by_key("highway");
 
-				if (taglist.key_value_is_false("motorcar")) {
-					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and motorcar=no should be motorcycle");
-				} else if (taglist.key_value_is_true("motorcar")) {
-					writer.writeWay(L_DEFAULTS, way, "redundant", "motor_vehicle=yes includes motorcar=yes");
-				}
-
-				if (taglist.key_value_is_false("hgv")) {
-					writer.writeWay(L_WP, way, "default", "motor_vehicle=yes and hgv=no should be motorcar");
-				} else if (taglist.key_value_is_true("hgv")) {
-					writer.writeWay(L_DEFAULTS, way, "redundant", "motor_vehicle=yes includes hgv=yes");
-				}
+			if (!taglist.has_key("highway")) {
+				return;
 			}
 
-			if (taglist.key_value_is_false("tunnel")) {
-				writer.writeWay(L_DEFAULTS, way, "redundant", "tunnel=no ist default");
-			}
+			circular_way(way, taglist);
 
-			if (taglist.has_key_value("junction", "roundabout")) {
-				if (taglist.has_key("name")) {
-					writer.writeWay(L_WP, way, "default", "name on roundabout is most like an error");
-				}
-				if (taglist.has_key("ref")) {
-					writer.writeWay(L_WP, way, "default", "ref on roundabout is most like an error");
-				}
-				if (taglist.has_key("oneway")) {
-					writer.writeWay(L_DEFAULTS, way, "redundant", "oneway on roundabout is default");
-				}
-				if (taglist.key_value_in_list("sidewalk", { "both", "yes", "left" })) {
-					writer.writeWay(L_WP, way, "default", "sidewalk=%s on roundabout - Right hand drive countries should have only a right sidewalk",
-							taglist.get_value_by_key("sidewalk"));
-				}
-				if (taglist.key_value_in_list("cycleway", { "opposite", "opposite_lane", "opposite_track" })) {
-					writer.writeWay(L_WP, way, "default", "cycleway=%s on roundabout is broken",
-							taglist.get_value_by_key("cycleway"));
+			tag_layer(way, taglist);
+			tag_ref(way, taglist);
+			tag_maxspeed(way, taglist);	// maxspeed:forward, maxspeed:backward
+			tag_maxheight(way, taglist);
+			tag_lanes(way, taglist);	// turn:lanes, destination:lanes
+			tag_sidewalk(way, taglist);
+			tag_segregated(way, taglist);
+			tag_shoulder(way, taglist);
+			tag_oneway(way, taglist);
+			tag_construction(way, taglist);
+			tag_tracktype(way, taglist);
+			tag_tunnel(way, taglist);
+			tag_junction(way, taglist);
+
+			// TODO - noexit
+			// TODO - lit
+			// TODO - hazmat
+			// TODO - surface
+			// TODO - smoothness
+			// TODO - incline
+
+			tag_bicycle(way, taglist);
+			tag_foot(way, taglist);
+			tag_access(way, taglist);
+			tag_goods(way, taglist);
+			tag_motor_vehicle(way, taglist);
+			tag_vehicle(way, taglist);
+
+			// TODO - psv
+			// TODO - motorcycle
+			// TODO - hgv
+			// TODO - forestry
+			// TODO - agricultural
+
+			highway_road(way, taglist);
+			highway_footway(way, taglist);
+			highway_cycleway(way, taglist);
+			highway_path(way, taglist);
+			highway_living_street(way, taglist);
+			highway_service(way, taglist);
+			highway_track(way, taglist);
+
+			if (taglist.is_public_road()) {
+				const std::vector<const char *>	accesstags={
+					"access", "vehicle", "motor_vehicle", "motorcycle",
+					"motorcar", "hgv", "psv",
+					"goods", "mofa", "moped", "horse"};
+
+				for(auto key : accesstags) {
+					const char *value=taglist.get_value_by_key(key);
+					const char *highway=taglist.get_value_by_key("highway");
+
+					if (!value)
+						continue;
+
+					if (!strcmp(value, "permissive")) {
+						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=permissive access tags", highway, key);
+					} else if (!strcmp(value, "private")) {
+						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=private access tags", highway, key);
+					} else if (!strcmp(value, "customers")) {
+						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=customers access tags", highway, key);
+					}
 				}
 			}
 		}
