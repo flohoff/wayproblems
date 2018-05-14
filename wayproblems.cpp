@@ -259,14 +259,7 @@ class WayHandler : public osmium::handler::Handler {
 	public:
 		WayHandler(SpatiaLiteWriter &writer) : writer(writer) {};
 
-		void way(osmium::Way& way) {
-			extendedTagList	taglist(way.tags());
-			const char *highway=taglist.get_value_by_key("highway");
-
-			if (!taglist.has_key("highway")) {
-				return;
-			}
-
+		void circular_way(osmium::Way& way, extendedTagList& taglist) {
 			if (way.ends_have_same_id()) {
 				if (!taglist.has_key_value("area", "yes")
 					&& !taglist.has_key_value("junction", "roundabout")) {
@@ -277,7 +270,28 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_WP, way, "default", "area=yes on unclosed way");
 				}
 			}
+		}
 
+		void tag_layer(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("layer")) {
+				return;
+			}
+
+			if (!taglist.key_value_is_int("layer")) {
+				writer.writeWay(L_WP, way, "default", "layer=%s is not integer", taglist.get_value_by_key("layer"));
+			} else {
+				int layer=taglist.key_value_as_int("layer");
+				if (layer == 0) {
+					writer.writeWay(L_DEFAULTS, way, "redundant", "layer=%s is default", taglist.get_value_by_key("layer"));
+				} else if (layer > 10) {
+					writer.writeWay(L_WP, way, "redundant", "layer=%s where num > 10 seems broken", taglist.get_value_by_key("layer"));
+				} else if (layer < -10) {
+					writer.writeWay(L_WP, way, "redundant", "layer=%s where num < -10 seems broken", taglist.get_value_by_key("layer"));
+				}
+			}
+		}
+
+		void tag_ref(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.highway_should_have_ref()) {
 				if (!taglist.has_key_value("junction", "roundabout")) {
 					if (!taglist.has_key("ref")) {
@@ -286,153 +300,16 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
-			if (taglist.has_key("layer")) {
-				if (!taglist.key_value_is_int("layer")) {
-					writer.writeWay(L_WP, way, "default", "layer=%s is not integer", taglist.get_value_by_key("layer"));
-				} else {
-					int layer=taglist.key_value_as_int("layer");
-					if (layer == 0) {
-						writer.writeWay(L_DEFAULTS, way, "redundant", "layer=%s is default", taglist.get_value_by_key("layer"));
-					} else if (layer > 10) {
-						writer.writeWay(L_WP, way, "redundant", "layer=%s where num > 10 seems broken", taglist.get_value_by_key("layer"));
-					} else if (layer < -10) {
-						writer.writeWay(L_WP, way, "redundant", "layer=%s where num < -10 seems broken", taglist.get_value_by_key("layer"));
+			if (!taglist.highway_may_have_ref()) {
+				if (!taglist.has_key_value("highway", "path")) {
+					if (taglist.has_key("ref")) {
+						writer.writeWay(L_REF, way, "ref", "highway should not have ref");
 					}
 				}
 			}
+		}
 
-			if (taglist.has_key("sidewalk")) {
-				if (!taglist.key_value_in_list("sidewalk", { "both", "left", "right", "none", "no", "yes", "separate" })) {
-					writer.writeWay(L_WP, way, "default", "sidewalk=%s not in known value list", taglist.get_value_by_key("sidewalk"));
-				}
-
-				/* sidewalk on motorway or trunk */
-				if (taglist.key_value_in_list("sidewalk", { "both", "left", "right", "yes" })) {
-					// Removed trunk_link - seems valid: Example https://www.openstreetmap.org/way/10871357
-					if (taglist.key_value_in_list("highway", { "motorway", "motorway_link", "trunk" })) {
-						writer.writeWay(L_WP, way, "default", "highway=%s and sidewalk=%s - most likely an error",
-							taglist.get_value_by_key("highway"),taglist.get_value_by_key("sidewalk"));
-					}
-					/* sidewalk on motorroad */
-					if (taglist.key_value_is_true("motorroad")) {
-						writer.writeWay(L_WP, way, "default", "motorroad=%s and sidewalk=%s - most likely an error",
-							taglist.get_value_by_key("motorroad"),taglist.get_value_by_key("sidewalk"));
-					}
-				}
-			}
-
-			if (taglist.has_key("segregated")) {
-				if (!taglist.key_value_in_list("highway", { "footway", "cycleway", "path" })) {
-					writer.writeWay(L_WP, way, "default", "highway=%s and segregated=%s - segregated only used on foot/cycleway and path",
-						taglist.get_value_by_key("highway"),taglist.get_value_by_key("segregated"));
-				}
-				if (!taglist.key_value_in_list("segregated", { "yes", "no" })) {
-					writer.writeWay(L_WP, way, "default", "segregated=%s - value not in known value list",
-						taglist.get_value_by_key("segregated"));
-				}
-			}
-
-
-			if (taglist.has_key("bicycle")) {
-				const char *bikevalue=taglist.get_value_by_key("bicycle");
-
-				if (taglist.key_value_in_list("highway", { "living_street",
-						"residential", "unclassified",
-						"tertiary", "tertiary_link",
-						"secondary", "secondary_link",
-						"primary", "primary_link" })) {
-
-					if (taglist.key_value_is_true("bicycle")) {
-						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
-					} else if (taglist.has_key_value("bicycle", "permissive")) {
-						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=designated on highway=%s is default - road is public", highway);
-					} else if (taglist.has_key_value("bicycle", "private")) {
-						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken - road is public", bikevalue, highway);
-					} else if (taglist.has_key_value("bicycle", "customers")) {
-						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken - road is public", bikevalue, highway);
-					} else if (taglist.has_key_value("bicycle", "destination")) {
-						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is suspicious - StVO would allow vehicle=destination", bikevalue, highway);
-					}
-				}
-
-				if (taglist.key_value_in_list("highway", { "track", "service" })) {
-					if (taglist.key_value_is_true("bicycle")) {
-						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is redundant", bikevalue, highway);
-					}
-				}
-
-				if (taglist.key_value_in_list("highway", { "trunk", "trunk_link", "motorway", "motorway_link" })) {
-					if (taglist.key_value_in_list("bicycle", { "no", "0", "false" })) {
-						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
-					} else {
-						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken", bikevalue, highway);
-					}
-				}
-
-				if (!taglist.key_value_in_list("bicycle", { "yes", "no", "private", "permissive",
-						"destination" , "designated", "use_sidepath", "dismount" })) {
-					writer.writeWay(L_STRANGE, way, "default", "bicycle=%s on highway=%s", bikevalue, highway);
-				}
-			}
-
-
-			if (taglist.has_key("foot")) {
-				const char *footvalue=taglist.get_value_by_key("foot");
-
-				if (taglist.key_value_in_list("highway", { "living_street",
-						"residential", "unclassified",
-						"tertiary", "tertiary_link",
-						"secondary", "secondary_link",
-						"primary", "primary_link" })) {
-
-					if (taglist.key_value_is_true("foot")) {
-						writer.writeWay(L_DEFAULTS, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
-					} else if (taglist.has_key_value("foot", "permissive")) {
-						writer.writeWay(L_WP, way, "default", "foot=yes on highway=%s is default - permissive on public road is broken", highway);
-					} else if (taglist.has_key_value("foot", "private")) {
-						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - road is public", footvalue, highway);
-					} else if (taglist.has_key_value("foot", "customers")) {
-						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - road is public", footvalue, highway);
-					} else if (taglist.has_key_value("foot", "destination")) {
-						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - No way StVO can sign this", footvalue, highway);
-					}
-				}
-
-				if (taglist.key_value_in_list("highway", { "track", "service" })) {
-					if (taglist.key_value_is_true("foot")) {
-						writer.writeWay(L_DEFAULTS, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
-					}
-				}
-
-				if (taglist.key_value_in_list("highway", { "trunk", "trunk_link", "motorway", "motorway_link" })) {
-					if (taglist.key_value_is_true("foot")) {
-						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken", footvalue, highway);
-					}
-				}
-
-				if (!taglist.key_value_in_list("foot", { "yes", "no", "private", "permissive", "destination" , "designated" })) {
-					writer.writeWay(L_STRANGE, way, "default", "foot=%s on highway=%s", footvalue, highway);
-				}
-			}
-
-			if (taglist.has_key("shoulder")) {
-				if (!taglist.key_value_in_list("shoulder", { "both", "left", "right", "no", "yes" })) {
-					writer.writeWay(L_WP, way, "default", "shoulder=%s not in known value list", taglist.get_value_by_key("shoulder"));
-				}
-			}
-
-			if (taglist.has_key_value("highway", "path")) {
-				if (taglist.has_key("cycleway")) {
-					if (taglist.key_value_in_list("cycleway", { "shared", "track" })) {
-						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s tag should be on road or absent",
-								taglist.get_value_by_key("cycleway"));
-					} else {
-						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s is unknown value",
-								taglist.get_value_by_key("cycleway"));
-					}
-				}
-			}
-
+		void tag_maxspeed(osmium::Way& way, extendedTagList& taglist) {
 			/*
 			 * Maxspeed
 			 *
@@ -461,32 +338,37 @@ class WayHandler : public osmium::handler::Handler {
 					)) {
 				writer.writeWay(L_WP, way, "default", "maxspeed and maxspeed:forward/backward - overlapping values");
 			}
+		}
 
+		void tag_maxheight(osmium::Way& way, extendedTagList& taglist) {
 			/*
 			 * Maxheight
 			 */
-			if (taglist.has_key("maxheight")) {
-				if (!taglist.key_value_in_list("maxheight", { "default", "none", "unsigned", "no_sign", "no_indications", "below_default" })) {
-					if (!taglist.key_value_is_double("maxheight")) {
-						writer.writeWay(L_WP, way, "default", "maxheight=%s is not float",
-							taglist.get_value_by_key("maxheight"));
-					} else {
-						double maxheight=taglist.key_value_as_double("maxheight");
-						if (maxheight < 1.8) {
-							// https://www.openstreetmap.org/way/25048948
-							writer.writeWay(L_WP, way, "default", "maxheight=%s is less than 1.8",
-								taglist.get_value_by_key("maxheight"));
-							// TODO - Maxheight for general traffic - parking access might be lower
-						} else if (maxheight > 7) {
-							// https://www.openstreetmap.org/way/25363727
-							writer.writeWay(L_WP, way, "default", "maxheight=%s is more than 7 - suspicous value",
-								taglist.get_value_by_key("maxheight"));
-						}
-					}
+			if (!taglist.has_key("maxheight"))
+				return;
+
+			if (taglist.key_value_in_list("maxheight", { "default", "none", "unsigned", "no_sign", "no_indications", "below_default" }))
+				return;
+
+			if (!taglist.key_value_is_double("maxheight")) {
+				writer.writeWay(L_WP, way, "default", "maxheight=%s is not float",
+					taglist.get_value_by_key("maxheight"));
+			} else {
+				double maxheight=taglist.key_value_as_double("maxheight");
+				if (maxheight < 1.8) {
+					// https://www.openstreetmap.org/way/25048948
+					writer.writeWay(L_WP, way, "default", "maxheight=%s is less than 1.8",
+						taglist.get_value_by_key("maxheight"));
+					// TODO - Maxheight for general traffic - parking access might be lower
+				} else if (maxheight > 7) {
+					// https://www.openstreetmap.org/way/25363727
+					writer.writeWay(L_WP, way, "default", "maxheight=%s is more than 7 - suspicous value",
+						taglist.get_value_by_key("maxheight"));
 				}
 			}
+		}
 
-
+		void tag_lanes(osmium::Way& way, extendedTagList& taglist) {
 			/*
 			 * Lanes
 			 *
@@ -580,6 +462,62 @@ class WayHandler : public osmium::handler::Handler {
 							lanes, lanesfwd, lanesbck);
 				}
 			}
+		}
+
+		void tag_sidewalk(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("sidewalk"))
+				return;
+
+			if (!taglist.key_value_in_list("sidewalk", { "both", "left", "right", "none", "no", "yes", "separate" })) {
+				writer.writeWay(L_WP, way, "default", "sidewalk=%s not in known value list", taglist.get_value_by_key("sidewalk"));
+			}
+
+			/* sidewalk on motorway or trunk */
+			if (taglist.key_value_in_list("sidewalk", { "both", "left", "right", "yes" })) {
+				// Removed trunk_link - seems valid: Example https://www.openstreetmap.org/way/10871357
+				if (taglist.key_value_in_list("highway", { "motorway", "motorway_link", "trunk" })) {
+					writer.writeWay(L_WP, way, "default", "highway=%s and sidewalk=%s - most likely an error",
+						taglist.get_value_by_key("highway"),taglist.get_value_by_key("sidewalk"));
+				}
+				/* sidewalk on motorroad */
+				if (taglist.key_value_is_true("motorroad")) {
+					writer.writeWay(L_WP, way, "default", "motorroad=%s and sidewalk=%s - most likely an error",
+						taglist.get_value_by_key("motorroad"),taglist.get_value_by_key("sidewalk"));
+				}
+			}
+
+			// TODO - Sidewalk on cycleway, footway, path, track
+		}
+
+		void tag_segregated(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("segregated"))
+				return;
+
+			if (!taglist.key_value_in_list("highway", { "footway", "cycleway", "path" })) {
+				writer.writeWay(L_WP, way, "default", "highway=%s and segregated=%s - segregated only used on foot/cycleway and path",
+					taglist.get_value_by_key("highway"),taglist.get_value_by_key("segregated"));
+			}
+			if (!taglist.key_value_in_list("segregated", { "yes", "no" })) {
+				writer.writeWay(L_WP, way, "default", "segregated=%s - value not in known value list",
+					taglist.get_value_by_key("segregated"));
+			}
+		}
+
+		void tag_shoulder(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key("shoulder")) {
+				if (!taglist.key_value_in_list("shoulder", { "both", "left", "right", "no", "yes" })) {
+					writer.writeWay(L_WP, way, "default", "shoulder=%s not in known value list", taglist.get_value_by_key("shoulder"));
+				}
+			}
+
+			// TODO cycleway, footway, path, track dont have a shoulder
+		}
+
+		void tag_oneway(osmium::Way& way, extendedTagList& taglist) {
+
+			if (taglist.key_value_is_false("oneway")) {
+				writer.writeWay(L_DEFAULTS, way, "redundant", "oneway=no is default");
+			}
 
 			/* Elements which only make sense on ANY oneway */
 			if (!taglist.has_key("oneway") || taglist.key_value_in_list("oneway", { "0", "no" })) {
@@ -622,17 +560,151 @@ class WayHandler : public osmium::handler::Handler {
 					}
 				}
 			}
+		}
 
-			if (!taglist.highway_may_have_ref()) {
-				if (!taglist.has_key_value("highway", "path")) {
-					if (taglist.has_key("ref")) {
-						writer.writeWay(L_REF, way, "ref", "highway should not have ref");
+		void tag_construction(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("construction"))
+				return;
+
+			if (taglist.has_key_value("construction", "yes")) {
+				writer.writeWay(L_WP, way, "redundant", "construction=yes is deprecated");
+			} else if (taglist.has_key_value("construction", "no")) {
+				writer.writeWay(L_DEFAULTS, way, "redundant", "construction=no is default");
+			} else if (!taglist.key_value_in_list("construction", {
+					"motorway", "motorway_link", "trunk", "trunk_link",
+					"primary", "primary_link", "secondary", "secondary_link",
+					"tertiary", "tertiary_link", "unclassified",
+					"residential", "pedestrian", "service", "track", "cycleway", "footway",
+					"steps", "minor", "path" })) {
+				writer.writeWay(L_WP, way, "default", "construction=%s not in known list", taglist.get_value_by_key("construction"));
+			} else {
+				if (!taglist.has_key_value("highway", "construction")) {
+					writer.writeWay(L_WP, way, "default", "construction=%s on highway=%s",
+							taglist.get_value_by_key("highway"),
+							taglist.get_value_by_key("construction"));
+				}
+			}
+		}
+
+		void highway_road(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key_value("highway", "road")) {
+				writer.writeWay(L_WP, way, "default", "highway=road is only a temporary tagging for sat imagery based mapping");
+			}
+		}
+
+		void way(osmium::Way& way) {
+			extendedTagList	taglist(way.tags());
+			const char *highway=taglist.get_value_by_key("highway");
+
+			if (!taglist.has_key("highway")) {
+				return;
+			}
+
+			circular_way(way, taglist);
+			tag_layer(way, taglist);
+			tag_ref(way, taglist);
+			tag_maxspeed(way, taglist);
+			tag_maxheight(way, taglist);
+			tag_lanes(way, taglist);
+			tag_sidewalk(way, taglist);
+			tag_segregated(way, taglist);
+			tag_shoulder(way, taglist);
+			tag_oneway(way, taglist);
+			tag_construction(way, taglist);
+			highway_road(way, taglist);
+
+			if (taglist.has_key("bicycle")) {
+				const char *bikevalue=taglist.get_value_by_key("bicycle");
+
+				if (taglist.key_value_in_list("highway", { "living_street",
+						"residential", "unclassified",
+						"tertiary", "tertiary_link",
+						"secondary", "secondary_link",
+						"primary", "primary_link" })) {
+
+					if (taglist.key_value_is_true("bicycle")) {
+						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
+					} else if (taglist.has_key_value("bicycle", "permissive")) {
+						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=designated on highway=%s is default - road is public", highway);
+					} else if (taglist.has_key_value("bicycle", "private")) {
+						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken - road is public", bikevalue, highway);
+					} else if (taglist.has_key_value("bicycle", "customers")) {
+						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken - road is public", bikevalue, highway);
+					} else if (taglist.has_key_value("bicycle", "destination")) {
+						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is suspicious - StVO would allow vehicle=destination", bikevalue, highway);
 					}
+				}
+
+				if (taglist.key_value_in_list("highway", { "track", "service" })) {
+					if (taglist.key_value_is_true("bicycle")) {
+						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is redundant", bikevalue, highway);
+					}
+				}
+
+				if (taglist.key_value_in_list("highway", { "trunk", "trunk_link", "motorway", "motorway_link" })) {
+					if (taglist.key_value_in_list("bicycle", { "no", "0", "false" })) {
+						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
+					} else {
+						writer.writeWay(L_WP, way, "default", "bicycle=%s on highway=%s is broken", bikevalue, highway);
+					}
+				}
+
+				if (!taglist.key_value_in_list("bicycle", { "yes", "no", "private", "permissive",
+						"destination" , "designated", "use_sidepath", "dismount" })) {
+					writer.writeWay(L_STRANGE, way, "default", "bicycle=%s on highway=%s", bikevalue, highway);
 				}
 			}
 
-			if (taglist.has_key_value("highway", "road")) {
-				writer.writeWay(L_WP, way, "default", "highway=road is only a temporary tagging for sat imagery based mapping");
+			if (taglist.has_key("foot")) {
+				const char *footvalue=taglist.get_value_by_key("foot");
+
+				if (taglist.key_value_in_list("highway", { "living_street",
+						"residential", "unclassified",
+						"tertiary", "tertiary_link",
+						"secondary", "secondary_link",
+						"primary", "primary_link" })) {
+
+					if (taglist.key_value_is_true("foot")) {
+						writer.writeWay(L_DEFAULTS, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
+					} else if (taglist.has_key_value("foot", "permissive")) {
+						writer.writeWay(L_WP, way, "default", "foot=yes on highway=%s is default - permissive on public road is broken", highway);
+					} else if (taglist.has_key_value("foot", "private")) {
+						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - road is public", footvalue, highway);
+					} else if (taglist.has_key_value("foot", "customers")) {
+						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - road is public", footvalue, highway);
+					} else if (taglist.has_key_value("foot", "destination")) {
+						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - No way StVO can sign this", footvalue, highway);
+					}
+				}
+
+				if (taglist.key_value_in_list("highway", { "track", "service" })) {
+					if (taglist.key_value_is_true("foot")) {
+						writer.writeWay(L_DEFAULTS, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
+					}
+				}
+
+				if (taglist.key_value_in_list("highway", { "trunk", "trunk_link", "motorway", "motorway_link" })) {
+					if (taglist.key_value_is_true("foot")) {
+						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken", footvalue, highway);
+					}
+				}
+
+				if (!taglist.key_value_in_list("foot", { "yes", "no", "private", "permissive", "destination" , "designated" })) {
+					writer.writeWay(L_STRANGE, way, "default", "foot=%s on highway=%s", footvalue, highway);
+				}
+			}
+
+
+			if (taglist.has_key_value("highway", "path")) {
+				if (taglist.has_key("cycleway")) {
+					if (taglist.key_value_in_list("cycleway", { "shared", "track" })) {
+						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s tag should be on road or absent",
+								taglist.get_value_by_key("cycleway"));
+					} else {
+						writer.writeWay(L_WP, way, "default", "highway=path with cycleway=%s is unknown value",
+								taglist.get_value_by_key("cycleway"));
+					}
+				}
 			}
 
 			if (taglist.is_public_road()) {
@@ -819,31 +891,6 @@ class WayHandler : public osmium::handler::Handler {
 
 			if (taglist.key_value_is_false("tunnel")) {
 				writer.writeWay(L_DEFAULTS, way, "redundant", "tunnel=no ist default");
-			}
-
-			if (taglist.has_key("construction")) {
-				if (taglist.has_key_value("construction", "yes")) {
-					writer.writeWay(L_WP, way, "redundant", "construction=yes is deprecated");
-				} else if (taglist.has_key_value("construction", "no")) {
-					writer.writeWay(L_DEFAULTS, way, "redundant", "construction=no is default");
-				} else if (!taglist.key_value_in_list("construction", {
-						"motorway", "motorway_link", "trunk", "trunk_link",
-						"primary", "primary_link", "secondary", "secondary_link",
-						"tertiary", "tertiary_link", "unclassified",
-						"residential", "pedestrian", "service", "track", "cycleway", "footway",
-						"steps", "minor", "path" })) {
-					writer.writeWay(L_WP, way, "default", "construction=%s not in known list", taglist.get_value_by_key("construction"));
-				} else {
-					if (!taglist.has_key_value("highway", "construction")) {
-						writer.writeWay(L_WP, way, "default", "construction=%s on highway=%s",
-								taglist.get_value_by_key("highway"),
-								taglist.get_value_by_key("construction"));
-					}
-				}
-			}
-
-			if (taglist.key_value_is_false("oneway")) {
-				writer.writeWay(L_DEFAULTS, way, "redundant", "oneway=no is default");
 			}
 
 			if (taglist.has_key_value("junction", "roundabout")) {
