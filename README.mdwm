@@ -1,0 +1,28 @@
+
+`wayproblems` analyses tag usage on an OpenStreetMap pbf export for consistency.
+
+Building
+========
+
+Building is only tested on Debian/Stretch x86_64 but Ubuntu 16.04 should work aswell:
+
+	apt-get -fuy install build-essential cmake libboost-dev git libgdal-dev libbz2-dev libexpat1-dev \
+		libsparsehash-dev libboost-program-options-dev libgeos++-dev libproj-dev
+    
+	git clone https://github.com/osmcode/libosmium.git
+	git clone https://github.com/mapbox/protozero
+
+	cd wayproblems
+	cmake .
+	make
+
+Running
+=======
+
+Fetch a pbf extract for example from http://download.geofabrik.de then run:
+
+	./wayproblems -i mylittle.pbf -d output.sqlite 
+
+Output on stdout will be one problem per line. The sqlite is to be used with
+[spatialite-rest](https://github.com/flohoff/spatialite-rest).
+
