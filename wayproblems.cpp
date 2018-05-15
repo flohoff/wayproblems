@@ -746,6 +746,31 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+
+		// footway=* is only defined for highway=footway
+		//
+		// Old values (both, left, right, none) are deprecated
+		//
+		void tag_footway(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("footway"))
+				return;
+
+			if (taglist.key_value_in_list("footway", { "both", "left", "right", "none" })) {
+				writer.writeWay(L_WP, way, "default", "footway=%s on highway=%s is deprecated - replaced by sidewalk=",
+					taglist.get_value_by_key("footway"), taglist.get_value_by_key("highway"));
+			} else {
+				if (!taglist.has_key_value("highway", "footway")) {
+					writer.writeWay(L_WP, way, "default", "footway=%s on non highway=footway",
+						taglist.get_value_by_key("footway"));
+				} else {
+					if (!taglist.key_value_in_list("footway", { "sidewalk", "crossing" })) {
+						writer.writeWay(L_WP, way, "default", "footway=%s is unknown value",
+							taglist.get_value_by_key("footway"));
+					}
+				}
+			}
+		}
+
 		void tag_goods(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key("goods")) {
 				writer.writeWay(L_WP, way, "default", "goods=* is not in use in Germany - did you mean hgv=");
@@ -931,6 +956,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_tracktype(way, taglist);
 			tag_tunnel(way, taglist);
 			tag_junction(way, taglist);
+			tag_footway(way, taglist);
 
 			// TODO - noexit
 			// TODO - lit
@@ -951,6 +977,7 @@ class WayHandler : public osmium::handler::Handler {
 			// TODO - maxlength
 			// TODO - maxwidth
 			// TODO - maxwidth:physical
+			// TODO - embankment (collides with tunnel or bridge)
 
 			tag_bicycle(way, taglist);
 			tag_foot(way, taglist);
