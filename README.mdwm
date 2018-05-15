@@ -16,6 +16,8 @@ Building is only tested on Debian/Stretch x86_64 but Ubuntu 16.04 should work as
 	cmake .
 	make
 
+Alternatively you can build in a Vagrant box with `vagrant up`
+
 Running
 =======
 
