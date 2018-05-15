@@ -18,7 +18,7 @@ else()
         message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
 
-find_package(Boost 1.55.0 REQUIRED COMPONENTS program_options filesystem system )
+find_package(Boost 1.55.0 REQUIRED COMPONENTS program_options )
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(wayproblems wayproblems.cpp)
