@@ -29,3 +29,13 @@
 
 - noexit?
 - highway=track in landuse=residential?
+
+- With spatial index
+       - Bridges/Tunnels
+               -> height must be in the lower layer
+       - bicycle=use_sidepath must have mapped cycleway/path/footway
+       - street_lamps -> lit on highway?
+       - sharp street junctions
+       - highway connected to amenity=parking?
+       - building_passage for highways below buildings
+
