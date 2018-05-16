@@ -771,6 +771,36 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		void tag_hazmat(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("hazmat"))
+				return;
+
+			if (!taglist.key_value_in_list("hazmat", { "no", "yes", "destination", "designated" })) {
+				writer.writeWay(L_WP, way, "default", "hazmat=%s is not in known value list",
+					taglist.get_value_by_key("hazmat"));
+			}
+
+			if (taglist.key_value_in_list("hazmat", { "yes", "destination", "designated" })) {
+
+				// Ways not beeing part of the "Gefahrgutstraßengrundnetz"
+				if (taglist.key_value_in_list("highway", { "track", "path", "footway", "cycleway", "pedestrian" })) {
+					writer.writeWay(L_WP, way, "default", "hazmat=%s on highway=%s is broken",
+						taglist.get_value_by_key("hazmat"), taglist.get_value_by_key("highway"));
+
+				// Ways most likely not beeing part of the "Gefahrgutstraßengrundnetz"
+				} else if (taglist.key_value_in_list("highway", { "living_street", "service" })) {
+					writer.writeWay(L_WP, way, "default", "hazmat=%s on highway=%s is suspicious",
+						taglist.get_value_by_key("hazmat"), taglist.get_value_by_key("highway"));
+				}
+
+				// hazmat allowed but not goods vehicles
+				if (taglist.key_value_in_list("hgv", { "no", "false", "0" })) {
+					writer.writeWay(L_WP, way, "default", "hazmat=%s with hgv=%s is suspicious",
+						taglist.get_value_by_key("hazmat"), taglist.get_value_by_key("hgv"));
+				}
+			}
+		}
+
 		void tag_goods(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key("goods")) {
 				writer.writeWay(L_WP, way, "default", "goods=* is not in use in Germany - did you mean hgv=");
@@ -957,6 +987,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_tunnel(way, taglist);
 			tag_junction(way, taglist);
 			tag_footway(way, taglist);
+			tag_hazmat(way, taglist);
 
 			// TODO - noexit
 			// TODO - lit
