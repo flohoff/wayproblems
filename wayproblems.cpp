@@ -771,6 +771,23 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		void tag_lit(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("lit"))
+				return;
+
+			if (!taglist.key_value_in_list("lit", { "no", "yes", "limited", "24/7", "automatic" })) {
+				writer.writeWay(L_WP, way, "default", "lit=%s is not in known value list",
+					taglist.get_value_by_key("lit"));
+			}
+
+			if (taglist.key_value_in_list("lit", { "yes", "limited", "24/7", "automatic" })
+				&& taglist.key_value_in_list("highway", { "track" })) {
+
+				writer.writeWay(L_STRANGE, way, "default", "lit=%s on highway=%s is strange",
+					taglist.get_value_by_key("lit"), taglist.get_value_by_key("highway"));
+			}
+		}
+
 		void tag_hazmat(osmium::Way& way, extendedTagList& taglist) {
 			if (!taglist.has_key("hazmat"))
 				return;
@@ -988,6 +1005,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_junction(way, taglist);
 			tag_footway(way, taglist);
 			tag_hazmat(way, taglist);
+			tag_lit(way, taglist);
 
 			// TODO - noexit
 			// TODO - lit
