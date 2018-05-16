@@ -127,10 +127,6 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 class extendedTagList  {
 	const osmium::TagList&	taglist;
 
-	const std::vector<std::string> motor_vehicle_highway{
-			"residential", "unclassified", "tertiary",
-			"secondary", "primary", "motorway"};
-
 	const std::vector<std::string> highway_should_have_ref_list {
 			"motorway", "motorway_link",
 			"trunk", "trunk_link",
@@ -144,15 +140,6 @@ class extendedTagList  {
 			"secondary", "secondary_link",
 			"tertiary", "tertiary_link"};
 
-	const std::vector<std::string> highway_public {
-			"motorway", "motorway_link",
-			"trunk", "trunk_link",
-			"primary", "primary_link",
-			"secondary", "secondary_link",
-			"tertiary", "tertiary_link",
-			"unclassified", "residential"
-			"living_street"};
-
 	const std::vector<std::string> value_true_list {
 			"yes", "true", "1" };
 
@@ -161,6 +148,10 @@ class extendedTagList  {
 
 	public:
 		extendedTagList(const osmium::TagList& tags) : taglist(tags) { }
+
+		const char* operator[](const char* key) const noexcept {
+			return taglist.get_value_by_key(key);
+		}
 
 		bool string_in_list(const char *string, const std::vector<std::string> &list) {
 			if (!string)
@@ -240,15 +231,6 @@ class extendedTagList  {
 
 		bool key_value_is_false(const char *key) {
 			return string_in_list(get_value_by_key(key), value_false_list);
-		}
-
-		bool is_motor_vehicle_road() {
-			const char *highway=get_value_by_key("highway");
-			return string_in_list(highway, motor_vehicle_highway);
-		}
-
-		bool is_public_road() {
-			return string_in_list(get_value_by_key("highway"), highway_public);
 		}
 };
 
@@ -332,11 +314,12 @@ class WayHandler : public osmium::handler::Handler {
 						int ms=std::stoi(taglist.get_value_by_key(key.c_str()), nullptr, 10);
 					} catch(std::invalid_argument) {
 						writer.writeWay(L_WP, way, "default", "%s=%s is not numerical",
-								key.c_str(), taglist.get_value_by_key(key.c_str()));
+								key.c_str(), taglist[key.c_str()]);
 					}
 					// TODO - Integer/Decimal/Float?
 					// TODO - mph/knots/kmh
 					// TODO - > 120?
+				}
 			}
 
 			if (taglist.has_key("maxspeed") && (
@@ -359,18 +342,18 @@ class WayHandler : public osmium::handler::Handler {
 
 			if (!taglist.key_value_is_double("maxheight")) {
 				writer.writeWay(L_WP, way, "default", "maxheight=%s is not float",
-					taglist.get_value_by_key("maxheight"));
+					taglist["maxheight"]);
 			} else {
 				double maxheight=taglist.key_value_as_double("maxheight");
 				if (maxheight < 1.8) {
 					// https://www.openstreetmap.org/way/25048948
 					writer.writeWay(L_WP, way, "default", "maxheight=%s is less than 1.8",
-						taglist.get_value_by_key("maxheight"));
+						taglist["maxheight"]);
 					// TODO - Maxheight for general traffic - parking access might be lower
 				} else if (maxheight > 7) {
 					// https://www.openstreetmap.org/way/25363727
 					writer.writeWay(L_WP, way, "default", "maxheight=%s is more than 7 - suspicous value",
-						taglist.get_value_by_key("maxheight"));
+						taglist["maxheight"]);
 				}
 			}
 		}
@@ -1059,15 +1042,24 @@ class WayHandler : public osmium::handler::Handler {
 			// escalators
 			// pedestrian
 
-			if (taglist.is_public_road()) {
+			const std::vector<std::string> highway_public {
+					"motorway", "motorway_link",
+					"trunk", "trunk_link",
+					"primary", "primary_link",
+					"secondary", "secondary_link",
+					"tertiary", "tertiary_link",
+					"unclassified", "residential"
+					"living_street"};
+
+			if (taglist.key_value_in_list("highway", highway_public)) {
 				const std::vector<const char *>	accesstags={
 					"access", "vehicle", "motor_vehicle", "motorcycle",
 					"motorcar", "hgv", "psv",
 					"goods", "mofa", "moped", "horse"};
 
 				for(auto key : accesstags) {
-					const char *value=taglist.get_value_by_key(key);
-					const char *highway=taglist.get_value_by_key("highway");
+					const char *value=taglist[key];
+					const char *highway=taglist["highway"];
 
 					if (!value)
 						continue;
