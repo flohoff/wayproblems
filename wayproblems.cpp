@@ -769,6 +769,33 @@ class WayHandler : public osmium::handler::Handler {
 			return taglist.key_value_in_list("tunnel", { "yes", "true", "1", "avalanche_protector", "building_passage" });
 		}
 
+		void tag_overtaking(osmium::Way& way, extendedTagList& taglist) {
+				std::vector<const char *>	keys={ "overtaking", "overtaking:forward", "overtaking:backward" };
+
+				for(auto key : keys) {
+					if (!taglist.has_key(key))
+						continue;
+					if (!taglist.key_value_in_list(key, { "no", "yes", "caution", "both", "forward", "backward" })) {
+						writer.writeWay(L_WP, way, "default", "%s=%s value not in known list",
+							key, taglist[key]);
+					}
+					// TODO - lanes=1 - no overtaking
+					//        lanes:forward/lanes:backward/oneway?
+				}
+
+				if (taglist.key_value_in_list("overtaking:forward", { "both", "backward" })) {
+					writer.writeWay(L_WP, way, "default", "overtaking:forward=%s is broken",
+						taglist["overtaking:forward"]);
+					// TODO - oneway in opposite direction
+				}
+
+				if (taglist.key_value_in_list("overtaking:backward", { "both", "forward" })) {
+					writer.writeWay(L_WP, way, "default", "overtaking:backward=%s is broken",
+						taglist["overtaking:backward"]);
+					// TODO - oneway in opposite direction
+				}
+		}
+
 		void tag_cutting(osmium::Way& way, extendedTagList& taglist) {
 			if (!taglist.has_key("cutting"))
 				return;
@@ -1057,16 +1084,17 @@ class WayHandler : public osmium::handler::Handler {
 			tag_lit(way, taglist);
 			tag_embankment(way, taglist);
 			tag_cutting(way, taglist);
+			tag_overtaking(way, taglist);
 
 			// TODO - noexit
 			// TODO - surface
 			// TODO - smoothness
 			// TODO - incline
-			// TODO - overtaking
 			// TODO - trafic_calming (on ways)
 			// TODO - driving_side
 			// TODO - abutters
 			// TODO - maxspeed:conditional
+			// TODO - maxspeed:source
 			// TODO - cycleway, cycleway:right, cycleway:left
 			// TODO - parking:lane
 			// TODO - lanes:both_ways!??
