@@ -787,6 +787,10 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_WP, way, "default", "embankment=%s and bridge=%s is broken",
 						taglist["embankment"], taglist["bridge"]);
 				}
+				if (taglist.key_value_in_list("cutting", { "yes", "1", "true" })) {
+					writer.writeWay(L_WP, way, "default", "embankment=%s and cutting=%s is broken",
+						taglist["embankment"], taglist["cutting"]);
+				}
 			} else if (taglist.key_value_in_list("embankment", { "no", "0", "false" })) {
 					writer.writeWay(L_DEFAULTS, way, "default", "embankment=no is default");
 			}
