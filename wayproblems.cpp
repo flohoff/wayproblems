@@ -316,20 +316,27 @@ class WayHandler : public osmium::handler::Handler {
 			 */
 
 			const std::vector<const char *>	maxspeedtags={ "maxspeed", "maxspeed:forward", "maxspeed:backward" };
-			for(auto key : maxspeedtags) {
-				if (taglist.has_key(key)) {
-					if (!taglist.key_value_in_list(key, { "none", "signals" })) {
-						try {
-							int ms=std::stoi(taglist.get_value_by_key(key), nullptr, 10);
-						} catch(std::invalid_argument) {
-							writer.writeWay(L_WP, way, "default", "%s=%s is not numerical",
-									key, taglist.get_value_by_key(key));
-						}
+			const std::vector<const char *>	vehicles={ "", ":hgv", ":vehicle", ":motor_vehicle", ":bus" };
+			for(auto maxspeedtag : maxspeedtags) {
+				for(auto vehicle : vehicles) {
+					std::string	key=maxspeedtag;
+					key.append(vehicle);
+
+					if (!taglist.has_key(key.c_str()))
+						continue;
+
+					if (taglist.key_value_in_list(key.c_str(), { "none", "signals" }))
+						continue;
+
+					try {
+						int ms=std::stoi(taglist.get_value_by_key(key.c_str()), nullptr, 10);
+					} catch(std::invalid_argument) {
+						writer.writeWay(L_WP, way, "default", "%s=%s is not numerical",
+								key.c_str(), taglist.get_value_by_key(key.c_str()));
 					}
 					// TODO - Integer/Decimal/Float?
 					// TODO - mph/knots/kmh
 					// TODO - > 120?
-				}
 			}
 
 			if (taglist.has_key("maxspeed") && (
@@ -912,6 +919,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.has_key_value("highway", "living_street")) {
 				if (taglist.has_key("maxspeed")) {
 					writer.writeWay(L_WP, way, "default", "maxspeed on living_street is broken - neither numeric nor walk is correct");
+					// TODO - maxspeed:vehicle, maxspeed:motor_vehicle, maxspeed:hgv, maxspeed:motorcar, maxspeed:motorcycle etc
 				}
 
 				if (taglist.has_key_value("bicycle", "use_sidepath")) {
@@ -1008,8 +1016,6 @@ class WayHandler : public osmium::handler::Handler {
 			tag_lit(way, taglist);
 
 			// TODO - noexit
-			// TODO - lit
-			// TODO - hazmat
 			// TODO - surface
 			// TODO - smoothness
 			// TODO - incline
@@ -1018,7 +1024,6 @@ class WayHandler : public osmium::handler::Handler {
 			// TODO - driving_side
 			// TODO - abutters
 			// TODO - maxspeed:conditional
-			// TODO - maxspeed:hgv...
 			// TODO - cycleway, cycleway:right, cycleway:left
 			// TODO - parking:lane
 			// TODO - lanes:both_ways!??
