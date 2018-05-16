@@ -769,6 +769,29 @@ class WayHandler : public osmium::handler::Handler {
 			return taglist.key_value_in_list("tunnel", { "yes", "true", "1", "avalanche_protector", "building_passage" });
 		}
 
+		void tag_cutting(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("cutting"))
+				return;
+
+			if (!taglist.key_value_in_list("cutting", { "no", "yes", "1", "0", "true", "false", "left", "right" })) {
+				writer.writeWay(L_WP, way, "default", "cutting=%s is not in known value list",
+					taglist["cutting"]);
+			}
+
+			if (taglist.key_value_in_list("cutting", { "yes", "1", "true", "left", "right" })) {
+				if (is_tunnel(taglist)) {
+					writer.writeWay(L_WP, way, "default", "cutting=%s and tunnel=%s is broken",
+						taglist["cutting"], taglist["tunnel"]);
+				}
+				if (is_bridge(taglist)) {
+					writer.writeWay(L_WP, way, "default", "cutting=%s and bridge=%s is broken",
+						taglist["cutting"], taglist["bridge"]);
+				}
+			} else if (taglist.key_value_in_list("cutting", { "no", "0", "false" })) {
+					writer.writeWay(L_DEFAULTS, way, "default", "cutting=no is default");
+			}
+		}
+
 		void tag_embankment(osmium::Way& way, extendedTagList& taglist) {
 			if (!taglist.has_key("embankment"))
 				return;
@@ -1033,6 +1056,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_hazmat(way, taglist);
 			tag_lit(way, taglist);
 			tag_embankment(way, taglist);
+			tag_cutting(way, taglist);
 
 			// TODO - noexit
 			// TODO - surface
@@ -1050,6 +1074,7 @@ class WayHandler : public osmium::handler::Handler {
 			// TODO - maxlength
 			// TODO - maxwidth
 			// TODO - maxwidth:physical
+			// TODO - covered
 
 			tag_bicycle(way, taglist);
 			tag_foot(way, taglist);
