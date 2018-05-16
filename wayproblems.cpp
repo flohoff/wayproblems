@@ -761,6 +761,37 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		bool is_bridge(extendedTagList& taglist) {
+			return taglist.key_value_in_list("bridge", { "yes", "true", "1" });
+		}
+
+		bool is_tunnel(extendedTagList& taglist) {
+			return taglist.key_value_in_list("tunnel", { "yes", "true", "1", "avalanche_protector", "building_passage" });
+		}
+
+		void tag_embankment(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("embankment"))
+				return;
+
+			if (!taglist.key_value_in_list("embankment", { "no", "yes", "1", "0", "true", "false" })) {
+				writer.writeWay(L_WP, way, "default", "embankment=%s is not in known value list",
+					taglist["embankment"]);
+			}
+
+			if (taglist.key_value_in_list("embankment", { "yes", "1", "true" })) {
+				if (is_tunnel(taglist)) {
+					writer.writeWay(L_WP, way, "default", "embankment=%s and tunnel=%s is broken",
+						taglist["embankment"], taglist["tunnel"]);
+				}
+				if (is_bridge(taglist)) {
+					writer.writeWay(L_WP, way, "default", "embankment=%s and bridge=%s is broken",
+						taglist["embankment"], taglist["bridge"]);
+				}
+			} else if (taglist.key_value_in_list("embankment", { "no", "0", "false" })) {
+					writer.writeWay(L_DEFAULTS, way, "default", "embankment=no is default");
+			}
+		}
+
 		void tag_lit(osmium::Way& way, extendedTagList& taglist) {
 			if (!taglist.has_key("lit"))
 				return;
@@ -997,6 +1028,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_footway(way, taglist);
 			tag_hazmat(way, taglist);
 			tag_lit(way, taglist);
+			tag_embankment(way, taglist);
 
 			// TODO - noexit
 			// TODO - surface
@@ -1014,7 +1046,6 @@ class WayHandler : public osmium::handler::Handler {
 			// TODO - maxlength
 			// TODO - maxwidth
 			// TODO - maxwidth:physical
-			// TODO - embankment (collides with tunnel or bridge)
 
 			tag_bicycle(way, taglist);
 			tag_foot(way, taglist);
