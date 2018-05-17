@@ -109,8 +109,8 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 
 			feature.add_to_layer();
 
-			std::cout << "- way=" << way.id() << " problem=\"" << problem << "\"" << std::endl
-				<< "  changeset=" << way.changeset()
+			std::cout << "way=" << way.id() << " problem=\"" << problem << "\" || "
+				<< " changeset=" << way.changeset()
 				<< " user=\"" << way.user() << "\""
 				<< " timestamp=" << way.timestamp().to_iso()
 				<< " layer=" << layername[lid]
