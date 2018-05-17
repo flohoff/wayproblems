@@ -52,6 +52,7 @@ enum layerid {
 
 class SpatiaLiteWriter : public osmium::handler::Handler {
 	std::array<gdalcpp::Layer *, layermax>	layer;
+	std::array<std::string, layermax>	layername;
 
 	gdalcpp::Dataset		dataset;
 	osmium::geom::OGRFactory<>	m_factory{};
@@ -63,27 +64,28 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 
 			dataset.exec("PRAGMA synchronous = OFF");
 
-			layer[L_WP]=addLineStringLayer("wayproblems");
-			layer[L_REF]=addLineStringLayer("ref");
-			layer[L_FOOTWAY]=addLineStringLayer("footway");
-			layer[L_STRANGE]=addLineStringLayer("strange");
-			layer[L_TRACK]=addLineStringLayer("track");
-			layer[L_DEFAULTS]=addLineStringLayer("defaults");
+			addLineStringLayer(L_WP, "wayproblems");
+			addLineStringLayer(L_REF, "ref");
+			addLineStringLayer(L_FOOTWAY, "footway");
+			addLineStringLayer(L_STRANGE, "strange");
+			addLineStringLayer(L_TRACK, "track");
+			addLineStringLayer(L_DEFAULTS, "defaults");
 		}
 
-	gdalcpp::Layer *addLineStringLayer(const char *name) {
-		gdalcpp::Layer *layer=new gdalcpp::Layer(dataset, name, wkbLineString);
+	void addLineStringLayer(const int layerid, const char *name) {
+		gdalcpp::Layer *l=new gdalcpp::Layer(dataset, name, wkbLineString);
 
-		layer->add_field("id", OFTString, 20);
-		layer->add_field("key", OFTString, 20);
-		layer->add_field("value", OFTString, 20);
-		layer->add_field("changeset", OFTString, 20);
-		layer->add_field("user", OFTString, 20);
-		layer->add_field("timestamp", OFTString, 20);
-		layer->add_field("problem", OFTString, 60);
-		layer->add_field("style", OFTString, 20);
+		l->add_field("id", OFTString, 20);
+		l->add_field("key", OFTString, 20);
+		l->add_field("value", OFTString, 20);
+		l->add_field("changeset", OFTString, 20);
+		l->add_field("user", OFTString, 20);
+		l->add_field("timestamp", OFTString, 20);
+		l->add_field("problem", OFTString, 60);
+		l->add_field("style", OFTString, 20);
 
-		return layer;
+		layername[layerid]=name;
+		layer[layerid]=l;
 	}
 
 	void writeWay(layerid lid, const osmium::Way& way, const char *style, const char *format, ...) {
@@ -107,11 +109,11 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 
 			feature.add_to_layer();
 
-			std::cout << " way " << way.id() << " "
-				<< "changeset " << way.changeset() << " "
-				<< way.user() << " "
-				<< way.timestamp().to_iso() << " - "
-				<< problem << " "
+			std::cout << "- way=" << way.id() << " problem=\"" << problem << "\"" << std::endl
+				<< "  changeset=" << way.changeset()
+				<< " user=\"" << way.user() << "\""
+				<< " timestamp=" << way.timestamp().to_iso()
+				<< " layer=" << layername[lid]
 				<< std::endl;
 
 		} catch (gdalcpp::gdal_error) {
@@ -354,6 +356,25 @@ class WayHandler : public osmium::handler::Handler {
 					// https://www.openstreetmap.org/way/25363727
 					writer.writeWay(L_WP, way, "default", "maxheight=%s is more than 7 - suspicous value",
 						taglist["maxheight"]);
+				}
+			}
+		}
+
+		void tag_maxwidth(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("maxwidth"))
+				return;
+
+			if (!taglist.key_value_is_double("maxwidth")) {
+				writer.writeWay(L_WP, way, "default", "maxwidth=%s is not float",
+					taglist["maxwidth"]);
+			} else {
+				double maxwidth=taglist.key_value_as_double("maxwidth");
+				if (maxwidth < 1.8) {
+					writer.writeWay(L_WP, way, "default", "maxwidth=%s is less than 1.8",
+						taglist["maxwidth"]);
+				} else if (maxwidth > 7) {
+					writer.writeWay(L_WP, way, "default", "maxwidth=%s is more than 7 - suspicous value",
+						taglist["maxwidth"]);
 				}
 			}
 		}
@@ -781,6 +802,7 @@ class WayHandler : public osmium::handler::Handler {
 					}
 					// TODO - lanes=1 - no overtaking
 					//        lanes:forward/lanes:backward/oneway?
+					// TODO - overtaking:hgv, overtaking:forward:hgv
 				}
 
 				if (taglist.key_value_in_list("overtaking:forward", { "both", "backward" })) {
@@ -1085,6 +1107,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_embankment(way, taglist);
 			tag_cutting(way, taglist);
 			tag_overtaking(way, taglist);
+			tag_maxwidth(way, taglist);
 
 			// TODO - noexit
 			// TODO - surface
