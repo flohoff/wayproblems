@@ -246,7 +246,9 @@ class WayHandler : public osmium::handler::Handler {
 		void circular_way(osmium::Way& way, extendedTagList& taglist) {
 			if (way.ends_have_same_id()) {
 				if (!taglist.has_key_value("area", "yes")
-					&& !taglist.has_key_value("junction", "roundabout")) {
+					&& !taglist.has_key_value("junction", "roundabout")
+					&& taglist.key_value_in_list("highway", { "tertiary", "secondary",
+						"primary", "unclassified", "residential" })) {
 					writer.writeWay(L_STRANGE, way, "default", "Circular way without junction=roundabout");
 				}
 			} else {
