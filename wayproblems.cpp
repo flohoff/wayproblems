@@ -360,6 +360,19 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		void tag_type(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("type"))
+				return;
+
+			if (taglist.has_key_value("type", "route")) {
+				writer.writeWay(L_WP, way, "default", "type=%s is defined for route relations not ways",
+					taglist["type"]);
+			} else {
+				writer.writeWay(L_STRANGE, way, "default", "type=%s is strange",
+					taglist["type"]);
+			}
+		}
+
 		void tag_maxwidth(osmium::Way& way, extendedTagList& taglist) {
 			if (!taglist.has_key("maxwidth"))
 				return;
@@ -1108,6 +1121,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_cutting(way, taglist);
 			tag_overtaking(way, taglist);
 			tag_maxwidth(way, taglist);
+			tag_type(way, taglist);
 
 			// TODO - noexit
 			// TODO - surface
