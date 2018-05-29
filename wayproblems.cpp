@@ -82,6 +82,7 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 		l->add_field("user", OFTString, 20);
 		l->add_field("timestamp", OFTString, 20);
 		l->add_field("problem", OFTString, 60);
+		l->add_field("version", OFTString, 60);
 		l->add_field("style", OFTString, 20);
 
 		layername[layerid]=name;
@@ -106,6 +107,7 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 			feature.set_field("timestamp", way.timestamp().to_iso().c_str());
 			feature.set_field("problem", problem);
 			feature.set_field("style", style);
+			feature.set_field("version", static_cast<double>(way.version()));
 
 			feature.add_to_layer();
 
@@ -114,6 +116,7 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 				<< " user=\"" << way.user() << "\""
 				<< " timestamp=" << way.timestamp().to_iso()
 				<< " layer=" << layername[lid]
+				<< " version=" << way.version()
 				<< std::endl;
 
 		} catch (gdalcpp::gdal_error) {
@@ -936,6 +939,15 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		void tag_cycleway(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.key_value_in_list("cycleway:left", { "none", "no", "0" }) &&
+				taglist.key_value_in_list("cycleway:right", { "none", "no", "0" })) {
+
+				writer.writeWay(L_WP, way, "default", "cycleway:left + cycleway:right are the same - should be cycleway=no");
+			}
+			// TODO - Other values which might be the same
+		}
+
 		void tag_vehicle(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.key_value_is_true("vehicle")) {
 				if (taglist.key_value_is_false("motor_vehicle")) {
@@ -1149,6 +1161,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_goods(way, taglist);
 			tag_motor_vehicle(way, taglist);
 			tag_vehicle(way, taglist);
+			tag_cycleway(way, taglist);
 
 			// TODO - psv
 			// TODO - motorcycle
