@@ -35,7 +35,7 @@ class WayHandler : public osmium::handler::Handler {
 			std::vector<const char *>	dumptags={
 				"highway", "access", "vehicle", "motor_vehicle", "motorcycle",
 				"motorcar", "hgv", "psv", "bicycle", "foot", "agricultural", "bdouble",
-				"goods", "mofa", "moped", "horse"};
+				"goods", "mofa", "moped", "horse", "hazmat", "lit", "overtaking", "overtaking:forward", "overtaking:backward" };
 
 				for(auto key : dumptags) {
 					const char *value=taglist.get_value_by_key(key);

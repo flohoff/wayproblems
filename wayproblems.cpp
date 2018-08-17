@@ -296,6 +296,11 @@ class WayHandler : public osmium::handler::Handler {
 					}
 				}
 			}
+
+			if (taglist.key_value_in_list("ref", { "-", "+", "*", ".", "_", " ", "\t", "#" })) {
+				writer.writeWay(L_REF, way, "ref", "ref=%s seems broken", taglist.get_value_by_key("ref"));
+				writer.writeWay(L_WP, way, "ref", "ref=%s seems broken", taglist.get_value_by_key("ref"));
+			}
 		}
 
 		void tag_maxspeed(osmium::Way& way, extendedTagList& taglist) {
@@ -548,6 +553,7 @@ class WayHandler : public osmium::handler::Handler {
 				writer.writeWay(L_DEFAULTS, way, "redundant", "oneway=no is default");
 			}
 
+
 			/* Elements which only make sense on ANY oneway */
 			if (!taglist.has_key("oneway") || taglist.key_value_in_list("oneway", { "0", "no" })) {
 				std::vector<const char *>	lanekey={ "turn:lanes", "destination", "destination:lanes" };
@@ -575,6 +581,10 @@ class WayHandler : public osmium::handler::Handler {
 							writer.writeWay(L_WP, way, "default", "%s on oneway=%s makes no sense",
 								key, taglist.get_value_by_key("oneway"));
 						}
+					}
+
+					if (taglist.key_value_is_true("noexit")) {
+						writer.writeWay(L_DEFAULTS, way, "default", "noexit=yes on oneway is broken");
 					}
 				}
 
@@ -638,6 +648,9 @@ class WayHandler : public osmium::handler::Handler {
 				}
 				if (taglist.has_key("oneway")) {
 					writer.writeWay(L_DEFAULTS, way, "redundant", "oneway on roundabout is default");
+				}
+				if (taglist.key_value_is_true("noexit")) {
+					writer.writeWay(L_DEFAULTS, way, "default", "noexit=yes on roundabout is broken");
 				}
 				if (taglist.key_value_in_list("sidewalk", { "both", "yes", "left" })) {
 					writer.writeWay(L_WP, way, "default", "sidewalk=%s on roundabout - Right hand drive countries should have only a right sidewalk",
@@ -1054,6 +1067,15 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		void highway_motorway(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key_value("highway", "motorway"))
+				return;
+
+			if (taglist.key_value_is_true("noexit")) {
+				writer.writeWay(L_DEFAULTS, way, "default", "noexit=yes on motorway is broken");
+			}
+		}
+
 		void highway_track(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key_value("highway", "track")) {
 				if (taglist.has_key("name")) {
@@ -1177,6 +1199,7 @@ class WayHandler : public osmium::handler::Handler {
 			highway_living_street(way, taglist);
 			highway_service(way, taglist);
 			highway_track(way, taglist);
+			highway_motorway(way, taglist);
 
 			// steps
 			// escalators
@@ -1224,12 +1247,17 @@ int main(int argc, char* argv[]) {
 	po::options_description         desc("Allowed options");
         desc.add_options()
                 ("help,h", "produce help message")
-                ("infile,i", po::value<std::string>(), "Input file")
-		("dbname,d", po::value<std::string>(), "Output database name")
+                ("infile,i", po::value<std::string>()->required(), "Input file")
+		("dbname,d", po::value<std::string>()->required(), "Output database name")
         ;
         po::variables_map vm;
-        po::store(po::parse_command_line(argc, argv, desc), vm);
-	po::notify(vm);
+	try {
+		po::store(po::parse_command_line(argc, argv, desc), vm);
+		po::notify(vm);
+	} catch(boost::program_options::required_option& e) {
+		std::cerr << "Error: " << e.what() << "\n";
+		exit(-1);
+	}
 
 	// Initialize an empty DynamicHandler. Later it will be associated
 	// with one of the handlers. You can think of the DynamicHandler as
