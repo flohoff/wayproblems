@@ -303,6 +303,19 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		void tag_maxspeed_source(osmium::Way& way, extendedTagList& taglist) {
+			// maxspeed:source:forward
+			// maxspeed:source:backward
+			if (!taglist.has_key("maxspeed:source"))
+				return;
+
+			if (!taglist.key_value_in_list("maxspeed:source", { "DE:urban", "DE:rural", "DE:zone", "DE:zone30",
+						"DE:zone20", "DE:zone:30", "DE:zone:20" })) {
+				writer.writeWay(L_WP, way, "default", "maxspeed:source=%s is unknown",
+					taglist.get_value_by_key("maxspeed:source"));
+			}
+		}
+
 		void tag_maxspeed(osmium::Way& way, extendedTagList& taglist) {
 			/*
 			 * Maxspeed
@@ -1139,7 +1152,8 @@ class WayHandler : public osmium::handler::Handler {
 
 			tag_layer(way, taglist);
 			tag_ref(way, taglist);
-			tag_maxspeed(way, taglist);	// maxspeed:forward, maxspeed:backward
+			tag_maxspeed(way, taglist);		// maxspeed:forward, maxspeed:backward
+			tag_maxspeed_source(way, taglist);
 			tag_maxheight(way, taglist);
 			tag_lanes(way, taglist);	// turn:lanes, destination:lanes
 			tag_sidewalk(way, taglist);
