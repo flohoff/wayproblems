@@ -310,6 +310,22 @@ class WayHandler : public osmium::handler::Handler {
 			writer.writeWay(L_WP, way, "default", "maxspeed:source should be source:maxspeed");
 		}
 
+		void tag_maxspeed_type(osmium::Way& way, extendedTagList& taglist) {
+			// maxspeed:source:forward
+			// maxspeed:source:backward
+			//
+			if (!taglist.has_key("maxspeed:type"))
+				return;
+
+			if (!taglist.key_value_in_list("maxspeed:type", { "DE:urban", "DE:rural", "DE:zone", "DE:zone30",
+						"DE:zone20", "DE:zone:30", "DE:zone:20" })) {
+				writer.writeWay(L_WP, way, "default", "maxspeed:type=%s is unknown",
+					taglist.get_value_by_key("maxspeed:type"));
+			} else {
+				writer.writeWay(L_STRANGE, way, "default", "maxspeed:type should be source:maxspeed in DE");
+			}
+		}
+
 		void tag_source_maxspeed(osmium::Way& way, extendedTagList& taglist) {
 			// maxspeed:source:forward
 			// maxspeed:source:backward
@@ -1182,6 +1198,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_type(way, taglist);
 			tag_source_maxspeed(way, taglist);
 			tag_maxspeed_source(way, taglist);
+			tag_maxspeed_type(way, taglist);
 
 			// TODO - noexit
 			// TODO - surface
