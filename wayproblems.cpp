@@ -321,8 +321,6 @@ class WayHandler : public osmium::handler::Handler {
 						"DE:zone20", "DE:zone:30", "DE:zone:20" })) {
 				writer.writeWay(L_WP, way, "default", "maxspeed:type=%s is unknown",
 					taglist.get_value_by_key("maxspeed:type"));
-			} else {
-				writer.writeWay(L_STRANGE, way, "default", "maxspeed:type should be source:maxspeed in DE");
 			}
 		}
 
