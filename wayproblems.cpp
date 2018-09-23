@@ -677,10 +677,10 @@ class WayHandler : public osmium::handler::Handler {
 		void tag_junction(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key_value("junction", "roundabout")) {
 				if (taglist.has_key("name")) {
-					writer.writeWay(L_WP, way, "default", "name on roundabout is most like an error");
+					writer.writeWay(L_WP, way, "default", "name on roundabout is most likely an error - should not carry name or any street");
 				}
 				if (taglist.has_key("ref")) {
-					writer.writeWay(L_WP, way, "default", "ref on roundabout is most like an error");
+					writer.writeWay(L_WP, way, "default", "ref on roundabout is most likely an error - should not carry ref of any street");
 				}
 				if (taglist.has_key("oneway")) {
 					writer.writeWay(L_DEFAULTS, way, "redundant", "oneway on roundabout is default");
