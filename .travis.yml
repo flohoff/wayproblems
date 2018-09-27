@@ -18,11 +18,11 @@ addons:
     packages:
       - cmake-data
       - cmake
-			- libboost1.55-all-dev
-			- libboost-program-options1.55-dev
-			- libgdal-dev
-			- libbz2-dev
-			- libexpat1-dev
-			- libsparsehash-dev
-			- libgeos++-dev
-			- libproj-dev
+      - libboost1.55-all-dev
+      - libboost-program-options1.55-dev
+      - libgdal-dev
+      - libbz2-dev
+      - libexpat1-dev
+      - libsparsehash-dev
+      - libgeos++-dev
+      - libproj-dev
