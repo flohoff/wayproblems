@@ -1,6 +1,8 @@
 
 `wayproblems` analyses tag usage on an OpenStreetMap pbf export for consistency.
 
+[![Build Status](https://travis-ci.com/flohoff/wayproblems.svg?branch=master)](https://travis-ci.com/flohoff/wayproblems)
+
 Building
 ========
 
