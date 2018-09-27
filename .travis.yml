@@ -1,5 +1,6 @@
 language: cpp
 compiler: gcc
+sudo: false
 
 matrix:
   include:
@@ -26,3 +27,13 @@ addons:
       - libsparsehash-dev
       - libgeos++-dev
       - libproj-dev
+
+before_script:
+    - cd ${TRAVIS_BUILD_DIR}
+    - git submodule update --init
+    - gcc -v && g++ -v && cmake --version
+    - cmake .
+
+script:
+    - make VERBOSE=1
+
