@@ -9,10 +9,8 @@ Building is only tested on Debian/Stretch x86_64 but Ubuntu 16.04 should work as
 	apt-get -fuy install build-essential cmake libboost-dev git libgdal-dev libbz2-dev libexpat1-dev \
 		libsparsehash-dev libboost-program-options-dev libgeos++-dev libproj-dev
     
-	git clone https://github.com/osmcode/libosmium.git
-	git clone https://github.com/mapbox/protozero
-
 	cd wayproblems
+	git submodule update --init
 	cmake .
 	make
 
