@@ -784,7 +784,7 @@ class WayHandler : public osmium::handler::Handler {
 					}
 				}
 
-				if (!taglist.key_value_in_list("foot", { "yes", "no", "private", "permissive", "destination" , "designated" })) {
+				if (!taglist.key_value_in_list("foot", { "yes", "no", "private", "permissive", "destination" , "designated", "use_sidepath" })) {
 					writer.writeWay(L_STRANGE, way, "default", "foot=%s on highway=%s", footvalue, highway);
 				}
 			}
