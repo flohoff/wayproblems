@@ -662,9 +662,38 @@ class WayHandler : public osmium::handler::Handler {
 		}
 
 		void tag_tracktype(osmium::Way& way, extendedTagList& taglist) {
-			if (!taglist.has_key_value("highway", "track")
-					&& taglist.has_key("tracktype")) {
+			if (!taglist.has_key("tracktype"))
+				return;
+
+			if (!taglist.has_key_value("highway", "track")) {
 				writer.writeWay(L_WP, way, "default", "tracktype=* on non track");
+			}
+
+			if (!taglist.key_value_in_list("tracktype", { "grade1", "grade2", "grade3", "grade4", "grade5" })) {
+				writer.writeWay(L_WP, way, "default", "tracktype=%s is unknown",
+					taglist.get_value_by_key("tracktype"));
+			}
+
+			if (taglist.has_key("surface")) {
+				if (taglist.has_key_value("tracktype", "grade1")) {
+					if (!taglist.key_value_in_list("surface",
+							{ "paved", "cobblestone", "asphalt", "asphalt:lanes",
+							"paving_stones", "concrete", "concrete:lanes" })) {
+						writer.writeWay(L_WP, way, "default", "tracktype=%s with surface=%s is an suspicious combination",
+							taglist.get_value_by_key("tracktype"),
+							taglist.get_value_by_key("surface"));
+					}
+				}
+
+				if (taglist.key_value_in_list("tracktype", { "grade3", "grade4", "grade5" })) {
+					if (taglist.key_value_in_list("surface",
+							{ "paved", "cobblestone", "asphalt", "asphalt:lanes",
+							"paving_stones", "concrete", "concrete:lanes" })) {
+						writer.writeWay(L_WP, way, "default", "tracktype=%s with surface=%s is a suspicious combination",
+							taglist.get_value_by_key("tracktype"),
+							taglist.get_value_by_key("surface"));
+					}
+				}
 			}
 		}
 
