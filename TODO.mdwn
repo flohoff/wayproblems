@@ -29,6 +29,7 @@ Tag combination without spatial relation
 - motorway && oneway=yes
 - construction=no
 - highway=* && bicycle=yes
+- maxspeed != maxspeed:type based speed
 
 - noexit?
 
