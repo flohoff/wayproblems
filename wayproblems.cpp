@@ -317,8 +317,11 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.has_key("maxspeed:type"))
 				return;
 
-			if (!taglist.key_value_in_list("maxspeed:type", { "sign", "DE:motorway", "DE:urban", "DE:rural", "DE:zone", "DE:zone30",
-						"DE:zone20", "DE:zone:30", "DE:zone:20" })) {
+			if (!taglist.key_value_in_list("maxspeed:type",
+						{ "sign", "DE:motorway", "DE:urban", "DE:rural", 
+						"DE:zone",
+						"DE:zone30", "DE:Zone30", "DE:zone:30",
+						"DE:zone20", "DE:Zone20", "DE:zone:20" })) {
 				writer.writeWay(L_WP, way, "default", "maxspeed:type=%s is unknown",
 					taglist.get_value_by_key("maxspeed:type"));
 			}
@@ -1017,12 +1020,19 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		void tag_stray(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key("entrance")) {
+				writer.writeWay(L_WP, way, "default", "entrance=* is not used on highways but on nodes");
+			}
+		}
+
 		void tag_cycleway(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.key_value_in_list("cycleway:left", { "none", "no", "0" }) &&
 				taglist.key_value_in_list("cycleway:right", { "none", "no", "0" })) {
 
 				writer.writeWay(L_WP, way, "default", "cycleway:left + cycleway:right are the same - should be cycleway=no");
 			}
+
 			// TODO - Other values which might be the same
 		}
 
@@ -1253,6 +1263,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_vehicle(way, taglist);
 			tag_cycleway(way, taglist);
 
+			tag_stray(way, taglist);
 			// TODO - psv
 			// TODO - motorcycle
 			// TODO - hgv
