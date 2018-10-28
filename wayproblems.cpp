@@ -581,9 +581,12 @@ class WayHandler : public osmium::handler::Handler {
 				if (!taglist.key_value_in_list("shoulder", { "both", "left", "right", "no", "yes" })) {
 					writer.writeWay(L_WP, way, "default", "shoulder=%s not in known value list", taglist.get_value_by_key("shoulder"));
 				}
-			}
 
-			// TODO cycleway, footway, path, track dont have a shoulder
+				if (taglist.key_value_in_list("highway", { "path", "footway", "cycleway", "track", "steps", "pedestrian", "bridleway" })) {
+					writer.writeWay(L_WP, way, "default", "highway=%s should not have shoulder=%s",
+						taglist.get_value_by_key("highway"), taglist.get_value_by_key("shoulder"));
+				}
+			}
 		}
 
 		void tag_oneway(osmium::Way& way, extendedTagList& taglist) {
