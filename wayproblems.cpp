@@ -1024,6 +1024,14 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.has_key("entrance")) {
 				writer.writeWay(L_WP, way, "default", "entrance=* is not used on highways but on nodes");
 			}
+			if (taglist.has_key("waterway")) {
+				writer.writeWay(L_WP, way, "default", "waterway=%s is incompatible with a street",
+						taglist.get_value_by_key("waterway"));
+			}
+			if (taglist.has_key("building")) {
+				writer.writeWay(L_WP, way, "default", "building=%s is incompatible with a street",
+						taglist.get_value_by_key("building"));
+			}
 		}
 
 		void tag_cycleway(osmium::Way& way, extendedTagList& taglist) {
@@ -1202,13 +1210,40 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		bool highway_wecare(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("highway")) {
+				return false;
+			}
+
+			const std::vector<std::string> highway_valid {
+					"motorway", "motorway_link",
+					"trunk", "trunk_link",
+					"primary", "primary_link",
+					"secondary", "secondary_link",
+					"tertiary", "tertiary_link",
+					"unclassified", "residential",
+					"living_street",
+					"footway", "cycleway", "path", "bridleway",
+					"service", "track",
+					"road", "pedestrian", "steps", "construction"
+					};
+
+			if (!taglist.key_value_in_list("highway", highway_valid)) {
+				//std::cerr << "Unknown highway type " << taglist.get_value_by_key("highway") << std::endl;
+				return false;
+			}
+
+			return true;
+		}
+
+
 		void way(osmium::Way& way) {
 			extendedTagList	taglist(way.tags());
 			const char *highway=taglist.get_value_by_key("highway");
 
-			if (!taglist.has_key("highway")) {
+			/* Skip highway=bus_stop */
+			if (!highway_wecare(way, taglist))
 				return;
-			}
 
 			circular_way(way, taglist);
 
