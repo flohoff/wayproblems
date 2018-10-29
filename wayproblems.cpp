@@ -320,8 +320,8 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.key_value_in_list("maxspeed:type",
 						{ "sign", "DE:motorway", "DE:urban", "DE:rural", 
 						"DE:zone",
-						"DE:zone30", "DE:Zone30", "DE:zone:30",
-						"DE:zone20", "DE:Zone20", "DE:zone:20" })) {
+						"DE:zone30", "DE:zone30", "DE:zone:30",
+						"DE:zone20", "DE:zone20", "DE:zone:20" })) {
 				writer.writeWay(L_WP, way, "default", "maxspeed:type=%s is unknown",
 					taglist.get_value_by_key("maxspeed:type"));
 			}
