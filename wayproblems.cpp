@@ -307,7 +307,16 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.has_key("maxspeed:source"))
 				return;
 
-			writer.writeWay(L_WP, way, "default", "maxspeed:source should be source:maxspeed");
+			writer.writeWay(L_WP, way, "default", "maxspeed:source should be maxspeed:type");
+		}
+
+		bool maxspeed_valid_source(extendedTagList& taglist, const char *tag) {
+			return taglist.key_value_in_list(tag,
+						{ "sign", "DE:motorway", "DE:urban", "DE:rural",
+						"DE:zone",
+						"DE:zone30", "DE:zone30", "DE:zone:30",
+						"DE:zone20", "DE:zone20", "DE:zone:20" }
+						);
 		}
 
 		void tag_maxspeed_type(osmium::Way& way, extendedTagList& taglist) {
@@ -317,11 +326,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.has_key("maxspeed:type"))
 				return;
 
-			if (!taglist.key_value_in_list("maxspeed:type",
-						{ "sign", "DE:motorway", "DE:urban", "DE:rural", 
-						"DE:zone",
-						"DE:zone30", "DE:zone30", "DE:zone:30",
-						"DE:zone20", "DE:zone20", "DE:zone:20" })) {
+			if (!maxspeed_valid_source(taglist, "maxspeed:type")) {
 				writer.writeWay(L_WP, way, "default", "maxspeed:type=%s is unknown",
 					taglist.get_value_by_key("maxspeed:type"));
 			}
@@ -334,8 +339,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.has_key("source:maxspeed"))
 				return;
 
-			if (!taglist.key_value_in_list("source:maxspeed", { "sign", "DE:motorway", "DE:urban", "DE:rural", "DE:zone", "DE:zone30",
-						"DE:zone20", "DE:zone:30", "DE:zone:20" })) {
+			if (!maxspeed_valid_source(taglist, "source:maxspeed")) {
 				writer.writeWay(L_WP, way, "default", "source:maxspeed=%s is unknown",
 					taglist.get_value_by_key("source:maxspeed"));
 			}
