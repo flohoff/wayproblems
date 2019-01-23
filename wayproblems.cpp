@@ -47,6 +47,7 @@ enum layerid {
 	L_DEFAULTS,
 	L_TRACK,
 	L_STRANGE,
+	L_INCOMPLETE,
 	layermax
 };
 
@@ -69,6 +70,7 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 			addLineStringLayer(L_FOOTWAY, "footway");
 			addLineStringLayer(L_STRANGE, "strange");
 			addLineStringLayer(L_TRACK, "track");
+			addLineStringLayer(L_INCOMPLETE, "incomplete");
 			addLineStringLayer(L_DEFAULTS, "defaults");
 		}
 
@@ -1243,6 +1245,56 @@ class WayHandler : public osmium::handler::Handler {
 			return true;
 		}
 
+		void highway_incomplete(osmium::Way& way, extendedTagList& taglist) {
+			int	score=0;
+
+			/* FIXME For now we ignore roundabouts */
+			if (taglist.has_key_value("junction", "roundabout")) 
+				return;
+
+			const std::vector<std::string> highway_valid {
+					"trunk", "trunk_link",
+					"primary", "primary_link",
+					"secondary", "secondary_link",
+					"tertiary", "tertiary_link"
+					};
+
+			if (!taglist.key_value_in_list("highway", highway_valid))
+				return;
+
+			const std::vector<std::string> tagswanted {
+					"lit",
+					"sidewalk", "cycleway",
+					"surface", "shoulder"
+					};
+
+			std::string	missing="Missing tags: ";
+
+			for(auto t : tagswanted) {
+				if (taglist.has_key(t.c_str()))
+					continue;
+
+				score++;
+				missing.append(t);
+				missing.append(" ");
+			}
+
+			if (!(taglist.has_key("lanes") || (taglist.has_key("lanes:forward") && taglist.has_key("lanes:backward")))) {
+				score++;
+				missing.append("lanes ");
+			}
+
+			if (!(taglist.has_key("maxspeed") || !(taglist.has_key("maxspeed:forward") && taglist.has_key("maxspeed:backward")))) {
+				score++;
+				missing.append("maxspeed ");
+			}
+
+			if (score > 0) {
+				writer.writeWay(L_INCOMPLETE, way, "incomplete", missing.c_str());
+			}
+
+		}
+
 
 		void way(osmium::Way& way) {
 			extendedTagList	taglist(way.tags());
@@ -1321,6 +1373,9 @@ class WayHandler : public osmium::handler::Handler {
 			highway_service(way, taglist);
 			highway_track(way, taglist);
 			highway_motorway(way, taglist);
+
+
+			highway_incomplete(way, taglist);
 
 			// steps
 			// escalators
