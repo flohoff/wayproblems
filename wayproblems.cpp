@@ -649,6 +649,10 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		bool construction_osrm_whitelist(extendedTagList& taglist) {
+			return taglist.key_value_in_list("construction", { "no", "widening", "minor" });
+		}
+
 		void tag_construction(osmium::Way& way, extendedTagList& taglist) {
 			if (!taglist.has_key("construction"))
 				return;
@@ -657,19 +661,23 @@ class WayHandler : public osmium::handler::Handler {
 				writer.writeWay(L_WP, way, "redundant", "construction=yes is deprecated");
 			} else if (taglist.has_key_value("construction", "no")) {
 				writer.writeWay(L_DEFAULTS, way, "redundant", "construction=no is default");
-			} else if (!taglist.key_value_in_list("construction", {
+			}
+
+			if (!taglist.key_value_in_list("construction", {
+					"yes", "no", "widening", "minor",
 					"motorway", "motorway_link", "trunk", "trunk_link",
 					"primary", "primary_link", "secondary", "secondary_link",
 					"tertiary", "tertiary_link", "unclassified",
 					"residential", "pedestrian", "service", "track", "cycleway", "footway",
-					"steps", "minor", "path" })) {
+					"steps", "path" })) {
 				writer.writeWay(L_WP, way, "default", "construction=%s not in known list", taglist.get_value_by_key("construction"));
-			} else {
-				if (!taglist.has_key_value("highway", "construction")) {
-					writer.writeWay(L_WP, way, "default", "construction=%s on highway=%s",
-							taglist.get_value_by_key("highway"),
-							taglist.get_value_by_key("construction"));
-				}
+			}
+
+			if (!taglist.has_key_value("highway", "construction")
+					&& !construction_osrm_whitelist(taglist)) {
+				writer.writeWay(L_WP, way, "default", "construction=%s on highway=%s",
+						taglist.get_value_by_key("highway"),
+						taglist.get_value_by_key("construction"));
 			}
 		}
 
