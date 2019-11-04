@@ -653,6 +653,15 @@ class WayHandler : public osmium::handler::Handler {
 			return taglist.key_value_in_list("construction", { "no", "widening", "minor" });
 		}
 
+		void tag_proposed(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("proposed"))
+				return;
+
+			writer.writeWay(L_WP, way, "default", "proposed=%s on highway=%s causes OSRM to avoid road",
+					taglist.get_value_by_key("highway"),
+					taglist.get_value_by_key("construction"));
+		}
+
 		void tag_construction(osmium::Way& way, extendedTagList& taglist) {
 			if (!taglist.has_key("construction"))
 				return;
@@ -1323,6 +1332,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_shoulder(way, taglist);
 			tag_oneway(way, taglist);
 			tag_construction(way, taglist);
+			tag_proposed(way, taglist);
 			tag_tracktype(way, taglist);
 			tag_tunnel(way, taglist);
 			tag_junction(way, taglist);
