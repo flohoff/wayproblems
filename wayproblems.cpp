@@ -657,6 +657,9 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.has_key("proposed"))
 				return;
 
+			if (!taglist.has_key("highway"))
+				return;
+
 			writer.writeWay(L_WP, way, "default", "proposed=%s on highway=%s causes OSRM to avoid road",
 					taglist.get_value_by_key("highway"),
 					taglist.get_value_by_key("construction"));
