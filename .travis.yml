@@ -1,28 +1,24 @@
 language: cpp
 compiler: gcc
 sudo: false
+dist: bionic
 
 matrix:
   include:
     - os: linux
       addons:
         apt:
-          sources:
-            - ubuntu-toolchain-r-test
           packages:
-            - g++-6
+            - build-essential
             - cmake-data
             - cmake
-            - libboost1.55-all-dev
-            - libboost-program-options1.55-dev
+            - libboost-all-dev
             - libgdal-dev
             - libbz2-dev
             - libexpat1-dev
             - libsparsehash-dev
             - libgeos++-dev
             - libproj-dev
-      env:
-        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
 
 before_script:
     - git submodule update --init
