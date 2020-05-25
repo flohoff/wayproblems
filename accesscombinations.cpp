@@ -21,10 +21,13 @@
 
 #include <boost/program_options.hpp>
 
-#define DEBUG 0
+namespace po = boost::program_options;
 
 class WayHandler : public osmium::handler::Handler {
+	po::variables_map& vm;
 	public:
+		WayHandler(po::variables_map& vm) : vm(vm) {};
+
 		void way(osmium::Way& way) {
 			const osmium::TagList& taglist=way.tags();
 
@@ -37,6 +40,9 @@ class WayHandler : public osmium::handler::Handler {
 				"motorcar", "hgv", "psv", "bicycle", "foot", "agricultural",
 				"goods", "mofa", "moped", "horse"};
 
+				if (vm["wayid"].as<bool>()) {
+					std::cout << way.id() << " ";
+				}
 				for(auto key : dumptags) {
 					const char *value=taglist.get_value_by_key(key);
 					if (!value)
@@ -48,14 +54,13 @@ class WayHandler : public osmium::handler::Handler {
 };
 
 
-namespace po = boost::program_options;
 
 int main(int argc, char* argv[]) {
-
 	po::options_description         desc("Allowed options");
         desc.add_options()
                 ("help,h", "produce help message")
                 ("infile,i", po::value<std::string>()->required(), "Input file")
+                ("wayid,w", po::bool_switch(), "Display wayid")
         ;
         po::variables_map vm;
 
@@ -79,7 +84,7 @@ int main(int argc, char* argv[]) {
 	// real handler.
 	osmium::io::File input_file{vm["infile"].as<std::string>()};
 
-	WayHandler	handler;
+	WayHandler	handler(vm);
 
 	osmium::io::Reader reader{input_file};
 	osmium::apply(reader, handler);
