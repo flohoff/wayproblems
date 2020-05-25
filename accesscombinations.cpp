@@ -34,8 +34,8 @@ class WayHandler : public osmium::handler::Handler {
 
 			std::vector<const char *>	dumptags={
 				"highway", "access", "vehicle", "motor_vehicle", "motorcycle",
-				"motorcar", "hgv", "psv", "bicycle", "foot", "agricultural", "bdouble",
-				"goods", "mofa", "moped", "horse", "hazmat", "lit", "overtaking", "overtaking:forward", "overtaking:backward" };
+				"motorcar", "hgv", "psv", "bicycle", "foot", "agricultural",
+				"goods", "mofa", "moped", "horse"};
 
 				for(auto key : dumptags) {
 					const char *value=taglist.get_value_by_key(key);
@@ -55,11 +55,23 @@ int main(int argc, char* argv[]) {
 	po::options_description         desc("Allowed options");
         desc.add_options()
                 ("help,h", "produce help message")
-                ("infile,i", po::value<std::string>(), "Input file")
+                ("infile,i", po::value<std::string>()->required(), "Input file")
         ;
         po::variables_map vm;
-        po::store(po::parse_command_line(argc, argv, desc), vm);
-	po::notify(vm);
+
+	try {
+		po::store(po::parse_command_line(argc, argv, desc), vm);
+		po::notify(vm);
+	} catch(boost::program_options::required_option& e) {
+		std::cout << "Error: " << e.what() << "\n";
+                std::cout << desc << "\n";
+		exit(-1);
+	}
+
+        if (vm.count("help")) {
+                std::cout << desc << "\n";
+                return 1;
+        }
 
 	// Initialize an empty DynamicHandler. Later it will be associated
 	// with one of the handlers. You can think of the DynamicHandler as
