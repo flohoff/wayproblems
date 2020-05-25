@@ -84,6 +84,5 @@ int main(int argc, char* argv[]) {
 	osmium::io::Reader reader{input_file};
 	osmium::apply(reader, handler);
 	reader.close();
-	std::cerr << "Pass 2 done\n";
 }
 
