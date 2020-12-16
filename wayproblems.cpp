@@ -135,17 +135,17 @@ class extendedTagList  {
 	const osmium::TagList&	taglist;
 
 	const std::vector<std::string> highway_should_have_ref_list {
-			"motorway", "motorway_link",
-			"trunk", "trunk_link",
-			"primary", "primary_link",
-			"secondary", "secondary_link"};
+			"motorway",
+			"trunk",
+			"primary",
+			"secondary"};
 
 	const std::vector<std::string> highway_may_have_ref_list {
-			"motorway", "motorway_link",
-			"trunk", "trunk_link",
-			"primary", "primary_link",
-			"secondary", "secondary_link",
-			"tertiary", "tertiary_link"};
+			"motorway",
+			"trunk",
+			"primary",
+			"secondary",
+			"tertiary"};
 
 	const std::vector<std::string> value_true_list {
 			"yes", "true", "1" };
@@ -317,7 +317,8 @@ class WayHandler : public osmium::handler::Handler {
 						{ "sign", "DE:motorway", "DE:urban", "DE:rural",
 						"DE:zone",
 						"DE:zone30", "DE:zone30", "DE:zone:30",
-						"DE:zone20", "DE:zone20", "DE:zone:20" }
+						"DE:zone20", "DE:zone20", "DE:zone:20",
+						"signals" }
 						);
 		}
 
@@ -367,7 +368,7 @@ class WayHandler : public osmium::handler::Handler {
 						continue;
 
 					try {
-						int ms=std::stoi(taglist.get_value_by_key(key.c_str()), nullptr, 10);
+						std::stoi(taglist.get_value_by_key(key.c_str()), nullptr, 10);
 					} catch(std::invalid_argument) {
 						writer.writeWay(L_WP, way, "default", "%s=%s is not numerical",
 								key.c_str(), taglist[key.c_str()]);
