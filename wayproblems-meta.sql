@@ -32,7 +32,7 @@ INSERT INTO "meta" VALUES('style.steelline.color','#374e66');
 INSERT INTO "meta" VALUES('style.steelline.weight','4');
 INSERT INTO "meta" VALUES('style.steelline.opacity','0.9');
 
-INSERT INTO "meta" VALUES('style.brownline.color','#724f03');
+INSERT INTO "meta" VALUES('style.brownline.color','#CD853F');
 INSERT INTO "meta" VALUES('style.brownline.weight','4');
 INSERT INTO "meta" VALUES('style.brownline.opacity','0.9');
 
