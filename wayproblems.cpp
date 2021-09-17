@@ -1223,7 +1223,8 @@ class WayHandler : public osmium::handler::Handler {
 		void highway_living_street(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key_value("highway", "living_street")) {
 				if (taglist.has_key("maxspeed")) {
-					writer.writeWay(L_WP, way, "steelline", "maxspeed on living_street is broken - neither numeric nor walk is correct");
+					writer.writeWay(L_WP, way, "steelline", "maxspeed=%s on living_street is broken - neither numeric nor walk is correct",
+							taglist.get_value_by_key("maxspeed"));
 					// TODO - maxspeed:vehicle, maxspeed:motor_vehicle, maxspeed:hgv, maxspeed:motorcar, maxspeed:motorcycle etc
 				}
 
