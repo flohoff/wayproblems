@@ -897,9 +897,11 @@ class WayHandler : public osmium::handler::Handler {
 				if (taglist.key_value_is_true("access")) {
 					writer.writeWay(L_DEFAULTS, way, "violetline", "access=yes is default");
 				} else {
-					const char *accessvalue=taglist.get_value_by_key("access");
-					writer.writeWay(L_WP, way, "violetline", "access=%s - Nicht StVO konform. Vermutlich motor_vehicle=%s oder vehicle=%s",
-							accessvalue, accessvalue, accessvalue);
+					if (taglist.road_is_public()) {
+						const char *accessvalue=taglist.get_value_by_key("access");
+						writer.writeWay(L_WP, way, "violetline", "access=%s - Nicht StVO konform. Vermutlich motor_vehicle=%s oder vehicle=%s",
+								accessvalue, accessvalue, accessvalue);
+					}
 				}
 			}
 		}
