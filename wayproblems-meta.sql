@@ -85,22 +85,6 @@ INSERT INTO "meta" VALUES('layer.footway.columns:7','style');
 INSERT INTO "meta" VALUES('layer.footway.popup', ( readfile('wayproblems-meta.popup' )) );
 
 
-
-INSERT INTO "meta" VALUES('layer.track.geometrycolumn','geometry');
-INSERT INTO "meta" VALUES('layer.track.srid','4326');
-INSERT INTO "meta" VALUES('layer.track.stylecolumn','style');
-INSERT INTO "meta" VALUES('layer.track.columns:0','id');
-INSERT INTO "meta" VALUES('layer.track.columns:1','key');
-INSERT INTO "meta" VALUES('layer.track.columns:2','value');
-INSERT INTO "meta" VALUES('layer.track.columns:3','changeset');
-INSERT INTO "meta" VALUES('layer.track.columns:4','user');
-INSERT INTO "meta" VALUES('layer.track.columns:5','timestamp');
-INSERT INTO "meta" VALUES('layer.track.columns:6','problem');
-INSERT INTO "meta" VALUES('layer.track.columns:7','style');
-INSERT INTO "meta" VALUES('layer.track.popup', ( readfile('wayproblems-meta.popup' )) );
-
-
-
 INSERT INTO "meta" VALUES('layer.strange.geometrycolumn','geometry');
 INSERT INTO "meta" VALUES('layer.strange.srid','4326');
 INSERT INTO "meta" VALUES('layer.strange.stylecolumn','style');

@@ -45,7 +45,6 @@ enum layerid {
 	L_REF,
 	L_FOOTWAY,
 	L_DEFAULTS,
-	L_TRACK,
 	L_STRANGE,
 	L_CYCLING,
 	layermax
@@ -69,7 +68,6 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 			addLineStringLayer(L_REF, "ref");
 			addLineStringLayer(L_FOOTWAY, "footway");
 			addLineStringLayer(L_STRANGE, "strange");
-			addLineStringLayer(L_TRACK, "track");
 			addLineStringLayer(L_CYCLING, "cycling");
 			addLineStringLayer(L_DEFAULTS, "defaults");
 		}
@@ -723,11 +721,11 @@ class WayHandler : public osmium::handler::Handler {
 				return;
 
 			if (!taglist.has_key_value("highway", "track")) {
-				writer.writeWay(L_WP, way, "default", "tracktype=* on non track");
+				writer.writeWay(L_WP, way, "brownline", "tracktype=* on non track");
 			}
 
 			if (!taglist.key_value_in_list("tracktype", { "grade1", "grade2", "grade3", "grade4", "grade5" })) {
-				writer.writeWay(L_WP, way, "default", "tracktype=%s is unknown",
+				writer.writeWay(L_WP, way, "brownline", "tracktype=%s is unknown",
 					taglist.get_value_by_key("tracktype"));
 			}
 
@@ -736,7 +734,7 @@ class WayHandler : public osmium::handler::Handler {
 					if (!taglist.key_value_in_list("surface",
 							{ "paved", "cobblestone", "asphalt", "asphalt:lanes",
 							"paving_stones", "concrete", "concrete:lanes" })) {
-						writer.writeWay(L_WP, way, "default", "tracktype=%s with surface=%s is an suspicious combination",
+						writer.writeWay(L_WP, way, "brownline", "tracktype=%s with surface=%s is an suspicious combination",
 							taglist.get_value_by_key("tracktype"),
 							taglist.get_value_by_key("surface"));
 					}
@@ -746,7 +744,7 @@ class WayHandler : public osmium::handler::Handler {
 					if (taglist.key_value_in_list("surface",
 							{ "paved", "cobblestone", "asphalt", "asphalt:lanes",
 							"paving_stones", "concrete", "concrete:lanes" })) {
-						writer.writeWay(L_WP, way, "default", "tracktype=%s with surface=%s is a suspicious combination",
+						writer.writeWay(L_WP, way, "brownline", "tracktype=%s with surface=%s is a suspicious combination",
 							taglist.get_value_by_key("tracktype"),
 							taglist.get_value_by_key("surface"));
 					}
@@ -1255,16 +1253,16 @@ class WayHandler : public osmium::handler::Handler {
 		void highway_track(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key_value("highway", "track")) {
 				if (taglist.has_key("name")) {
-					writer.writeWay(L_TRACK, way, "default", "highway=track with name is suspicious - probably not track");
+					writer.writeWay(L_WP, way, "brownline", "highway=track with name is suspicious - probably not track");
 				}
 				if (taglist.has_key("maxspeed")) {
-					writer.writeWay(L_TRACK, way, "steelline", "highway=track with maxspeed is suspicious - probably not track");
+					writer.writeWay(L_WP, way, "steelline", "highway=track with maxspeed is suspicious - probably not track");
 				}
 
 				std::vector<const char *>	defaultno={ "motorcycle", "motorcar", "hgv", "psv", "motor_vehicle", "vehicle" };
 				for(auto key : defaultno) {
 					if (taglist.key_value_is_false(key)) {
-						writer.writeWay(L_TRACK, way, "default", "highway=track - %s=no is suspicious - should be agricutural or empty", key);
+						writer.writeWay(L_WP, way, "brownline", "highway=track - %s=no is suspicious - should be agricutural or empty", key);
 					}
 				}
 			}
