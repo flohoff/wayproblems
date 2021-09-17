@@ -309,7 +309,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.has_key("maxspeed:source"))
 				return;
 
-			writer.writeWay(L_WP, way, "default", "maxspeed:source should be maxspeed:type");
+			writer.writeWay(L_WP, way, "steelline", "maxspeed:source should be maxspeed:type");
 		}
 
 		bool maxspeed_valid_source(extendedTagList& taglist, const char *tag) {
@@ -330,7 +330,7 @@ class WayHandler : public osmium::handler::Handler {
 				return;
 
 			if (!maxspeed_valid_source(taglist, "maxspeed:type")) {
-				writer.writeWay(L_WP, way, "default", "maxspeed:type=%s is unknown",
+				writer.writeWay(L_WP, way, "steelline", "maxspeed:type=%s is unknown",
 					taglist.get_value_by_key("maxspeed:type"));
 			}
 		}
@@ -343,7 +343,7 @@ class WayHandler : public osmium::handler::Handler {
 				return;
 
 			if (!maxspeed_valid_source(taglist, "source:maxspeed")) {
-				writer.writeWay(L_WP, way, "default", "source:maxspeed=%s is unknown",
+				writer.writeWay(L_WP, way, "steelline", "source:maxspeed=%s is unknown",
 					taglist.get_value_by_key("source:maxspeed"));
 			}
 		}
@@ -370,7 +370,7 @@ class WayHandler : public osmium::handler::Handler {
 					try {
 						std::stoi(taglist.get_value_by_key(key.c_str()), nullptr, 10);
 					} catch(std::invalid_argument) {
-						writer.writeWay(L_WP, way, "default", "%s=%s is not numerical",
+						writer.writeWay(L_WP, way, "steelline", "%s=%s is not numerical",
 								key.c_str(), taglist[key.c_str()]);
 					}
 					// TODO - Integer/Decimal/Float?
@@ -383,7 +383,7 @@ class WayHandler : public osmium::handler::Handler {
 					 taglist.has_key("maxspeed:forward")
 					 || taglist.has_key("maxspeed:backward")
 					)) {
-				writer.writeWay(L_WP, way, "default", "maxspeed and maxspeed:forward/backward - overlapping values");
+				writer.writeWay(L_WP, way, "steelline", "maxspeed and maxspeed:forward/backward - overlapping values");
 			}
 		}
 
@@ -1207,7 +1207,7 @@ class WayHandler : public osmium::handler::Handler {
 		void highway_living_street(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key_value("highway", "living_street")) {
 				if (taglist.has_key("maxspeed")) {
-					writer.writeWay(L_WP, way, "default", "maxspeed on living_street is broken - neither numeric nor walk is correct");
+					writer.writeWay(L_WP, way, "steelline", "maxspeed on living_street is broken - neither numeric nor walk is correct");
 					// TODO - maxspeed:vehicle, maxspeed:motor_vehicle, maxspeed:hgv, maxspeed:motorcar, maxspeed:motorcycle etc
 				}
 
@@ -1241,7 +1241,7 @@ class WayHandler : public osmium::handler::Handler {
 					writer.writeWay(L_TRACK, way, "default", "highway=track with name is suspicious - probably not track");
 				}
 				if (taglist.has_key("maxspeed")) {
-					writer.writeWay(L_TRACK, way, "default", "highway=track with maxspeed is suspicious - probably not track");
+					writer.writeWay(L_TRACK, way, "steelline", "highway=track with maxspeed is suspicious - probably not track");
 				}
 
 				std::vector<const char *>	defaultno={ "motorcycle", "motorcar", "hgv", "psv", "motor_vehicle", "vehicle" };
