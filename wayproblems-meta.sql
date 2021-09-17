@@ -24,7 +24,21 @@ INSERT INTO "meta" VALUES('style.redundant.color','#007070');
 INSERT INTO "meta" VALUES('style.redundant.weight','3');
 INSERT INTO "meta" VALUES('style.redundant.opacity','0.6');
 
+INSERT INTO "meta" VALUES('style.redline.color','#ff0000');
+INSERT INTO "meta" VALUES('style.redline.weight','4');
+INSERT INTO "meta" VALUES('style.redline.opacity','0.9');
 
+INSERT INTO "meta" VALUES('style.steelline.color','#374e66');
+INSERT INTO "meta" VALUES('style.steelline.weight','4');
+INSERT INTO "meta" VALUES('style.steelline.opacity','0.9');
+
+INSERT INTO "meta" VALUES('style.brownline.color','#724f03');
+INSERT INTO "meta" VALUES('style.brownline.weight','4');
+INSERT INTO "meta" VALUES('style.brownline.opacity','0.9');
+
+INSERT INTO "meta" VALUES('style.violetline.color','#9932CC');
+INSERT INTO "meta" VALUES('style.violetline.weight','4');
+INSERT INTO "meta" VALUES('style.violetline.opacity','0.9');
 
 INSERT INTO "meta" VALUES('layer.wayproblems.geometrycolumn','geometry');
 INSERT INTO "meta" VALUES('layer.wayproblems.srid','4326');

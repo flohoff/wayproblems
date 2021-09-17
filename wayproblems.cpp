@@ -880,16 +880,15 @@ class WayHandler : public osmium::handler::Handler {
 
 		void tag_access(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key("access")) {
-				if (taglist.key_value_is_false("access")) {
-					writer.writeWay(L_WP, way, "default", "access=no - Nicht StVO konform. Vermutlich motor_vehicle=no oder vehicle=no");
-				} else if (taglist.key_value_is_true("access")) {
-					writer.writeWay(L_DEFAULTS, way, "redundant", "access=yes is default");
-				} else if (taglist.has_key_value("access", "destination")) {
-					writer.writeWay(L_WP, way, "default", "access=destination nicht StVO konform. Vermutlich vehicle=destination oder motor_vehicle=destination");
+				if (taglist.key_value_is_true("access")) {
+					writer.writeWay(L_DEFAULTS, way, "violetline", "access=yes is default");
+				} else {
+					const char *accessvalue=taglist.get_value_by_key("access");
+					writer.writeWay(L_WP, way, "violetline", "access=%s - Nicht StVO konform. Vermutlich motor_vehicle=%s oder vehicle=%s",
+							accessvalue, accessvalue, accessvalue);
 				}
 			}
 		}
-
 
 		// footway=* is only defined for highway=footway
 		//
