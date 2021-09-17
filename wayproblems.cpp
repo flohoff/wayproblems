@@ -337,13 +337,13 @@ class WayHandler : public osmium::handler::Handler {
 		}
 
 		bool maxspeed_valid_source(extendedTagList& taglist, const char *tag) {
-			return taglist.key_value_in_list(tag,
-						{ "sign", "DE:motorway", "DE:urban", "DE:rural",
-						"DE:zone",
-						"DE:zone30", "DE:zone30", "DE:zone:30",
-						"DE:zone20", "DE:zone20", "DE:zone:20",
-						"signals" }
-						);
+			return taglist.key_value_in_list(tag, {
+					"sign", "signals",
+					"DE:motorway", "DE:urban", "DE:rural",
+					"DE:zone", "DE:bicycle_road",
+					"DE:zone30", "DE:zone:30",
+					"DE:zone20", "DE:zone:20",
+				};
 		}
 
 		void tag_maxspeed_type(osmium::Way& way, extendedTagList& taglist) {
