@@ -343,7 +343,7 @@ class WayHandler : public osmium::handler::Handler {
 					"DE:zone", "DE:bicycle_road",
 					"DE:zone30", "DE:zone:30",
 					"DE:zone20", "DE:zone:20",
-				};
+				});
 		}
 
 		void tag_maxspeed_type(osmium::Way& way, extendedTagList& taglist) {
