@@ -135,17 +135,33 @@ class extendedTagList  {
 	const osmium::TagList&	taglist;
 
 	const std::vector<std::string> highway_should_have_ref_list {
-			"motorway",
-			"trunk",
-			"primary",
-			"secondary"};
+		"motorway",
+		"trunk",
+		"primary",
+		"secondary"
+	};
 
 	const std::vector<std::string> highway_may_have_ref_list {
-			"motorway",
-			"trunk",
-			"primary",
-			"secondary",
-			"tertiary"};
+		"motorway",
+		"trunk",
+		"primary",
+		"secondary",
+		"tertiary"
+	};
+
+	const std::vector<std::string> highway_motorway_list {
+		"motorway", "motorway_link"
+	};
+
+	const std::vector<std::string> highway_public_list {
+		"motorway", "motorway_link",
+		"trunk", "trunk_link",
+		"primary", "primary_link",
+		"secondary", "secondary_link",
+		"tertiary", "tertiary_link",
+		"unclassified", "residential"
+		"living_street"
+	};
 
 	const std::vector<std::string> value_true_list {
 			"yes", "true", "1" };
@@ -238,6 +254,14 @@ class extendedTagList  {
 
 		bool key_value_is_false(const char *key) {
 			return string_in_list(get_value_by_key(key), value_false_list);
+		}
+
+		bool road_is_public() {
+			return string_in_list(get_value_by_key("highway"), highway_public_list);
+		}
+
+		bool road_is_motorway() {
+			return string_in_list(get_value_by_key("highway"), highway_motorway_list);
 		}
 };
 
@@ -770,12 +794,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.has_key("bicycle")) {
 				const char *bikevalue=taglist.get_value_by_key("bicycle");
 
-				if (taglist.key_value_in_list("highway", { "living_street",
-						"residential", "unclassified",
-						"tertiary", "tertiary_link",
-						"secondary", "secondary_link",
-						"primary", "primary_link" })) {
-
+				if (taglist.road_is_public() && !taglist.road_is_motorway()) {
 					if (taglist.key_value_is_true("bicycle")) {
 						writer.writeWay(L_DEFAULTS, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
 						writer.writeWay(L_CYCLING, way, "redundant", "bicycle=%s on highway=%s is default", bikevalue, highway);
@@ -819,12 +838,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.has_key("foot")) {
 				const char *footvalue=taglist.get_value_by_key("foot");
 
-				if (taglist.key_value_in_list("highway", { "living_street",
-						"residential", "unclassified",
-						"tertiary", "tertiary_link",
-						"secondary", "secondary_link",
-						"primary", "primary_link" })) {
-
+				if (taglist.road_is_public() && !taglist.road_is_motorway()) {
 					if (taglist.key_value_is_true("foot")) {
 						writer.writeWay(L_DEFAULTS, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
 					} else if (taglist.has_key_value("foot", "permissive")) {
@@ -1398,16 +1412,7 @@ class WayHandler : public osmium::handler::Handler {
 			// escalators
 			// pedestrian
 
-			const std::vector<std::string> highway_public {
-					"motorway", "motorway_link",
-					"trunk", "trunk_link",
-					"primary", "primary_link",
-					"secondary", "secondary_link",
-					"tertiary", "tertiary_link",
-					"unclassified", "residential"
-					"living_street"};
-
-			if (taglist.key_value_in_list("highway", highway_public)) {
+			if (taglist.road_is_public()) {
 				const std::vector<const char *>	accesstags={
 					"access", "vehicle", "motor_vehicle", "motorcycle",
 					"motorcar", "hgv", "psv",
@@ -1421,11 +1426,11 @@ class WayHandler : public osmium::handler::Handler {
 						continue;
 
 					if (!strcmp(value, "permissive")) {
-						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=permissive access tags", highway, key);
+						writer.writeWay(L_WP, way, "violetline", "highway=%s is public way - cant have %s=permissive access tags", highway, key);
 					} else if (!strcmp(value, "private")) {
-						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=private access tags", highway, key);
+						writer.writeWay(L_WP, way, "violetline", "highway=%s is public way - cant have %s=private access tags", highway, key);
 					} else if (!strcmp(value, "customers")) {
-						writer.writeWay(L_WP, way, "default", "highway=%s is public way - cant have %s=customers access tags", highway, key);
+						writer.writeWay(L_WP, way, "violetline", "highway=%s is public way - cant have %s=customers access tags", highway, key);
 					}
 				}
 			}
