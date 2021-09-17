@@ -842,7 +842,7 @@ class WayHandler : public osmium::handler::Handler {
 					if (taglist.key_value_is_true("foot")) {
 						writer.writeWay(L_DEFAULTS, way, "redundant", "foot=%s on highway=%s is default", footvalue, highway);
 					} else if (taglist.has_key_value("foot", "permissive")) {
-						writer.writeWay(L_WP, way, "default", "foot=yes on highway=%s is default - permissive on public road is broken", highway);
+						writer.writeWay(L_WP, way, "default", "foot=yes on highway=%s is default", highway);
 					} else if (taglist.has_key_value("foot", "private")) {
 						writer.writeWay(L_WP, way, "default", "foot=%s on highway=%s is broken - road is public", footvalue, highway);
 					} else if (taglist.has_key_value("foot", "customers")) {
