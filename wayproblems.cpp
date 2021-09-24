@@ -1391,7 +1391,6 @@ class WayHandler : public osmium::handler::Handler {
 
 		void way(osmium::Way& way) {
 			extendedTagList	taglist(way.tags());
-			const char *highway=taglist.get_value_by_key("highway");
 
 			/* Skip highway=bus_stop */
 			if (!highway_wecare(way, taglist))
