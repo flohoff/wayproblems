@@ -132,6 +132,18 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 class extendedTagList  {
 	const osmium::TagList&	taglist;
 
+	const std::map<const std::string, const std::string> maxspeed_type_to_speed {
+			{ "DE:zone30", "30" },
+			{ "DE:zone:30", "30" },
+			{ "DE:zone20", "20" },
+			{ "DE:zone:20", "20" },
+			{ "DE:zone10", "10" },
+			{ "DE:zone:10", "10" },
+			{ "DE:bicycle_road", "30" },
+			{ "DE:urban", "50" },
+			{ "DE:rural", "100" }
+	};
+
 	const std::vector<std::string> highway_should_have_ref_list {
 		"motorway",
 		"trunk",
@@ -160,7 +172,6 @@ class extendedTagList  {
 		"unclassified", "residential"
 		"living_street"
 	};
-
 	const std::vector<std::string> value_true_list {
 			"yes", "true", "1" };
 
@@ -261,6 +272,20 @@ class extendedTagList  {
 		bool road_is_motorway() {
 			return string_in_list(get_value_by_key("highway"), highway_motorway_list);
 		}
+
+		const char *maxspeed_from_maxspeed_type_tag(const char *typetag) {
+			const char *maxspeedtype=get_value_by_key(typetag);
+
+			if (!maxspeedtype)
+				return nullptr;
+
+			auto maxspeed = maxspeed_type_to_speed.find(maxspeedtype);
+
+			if (maxspeed == maxspeed_type_to_speed.end())
+				return nullptr;
+
+			return maxspeed->second.c_str();
+		}
 };
 
 
@@ -331,7 +356,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.has_key("maxspeed:source"))
 				return;
 
-			writer.writeWay(L_WP, way, "steelline", "maxspeed:source should be maxspeed:type");
+			writer.writeWay(L_WP, way, "steelline", "maxspeed:source should be source:maxspeed or maxspeed:type");
 		}
 
 		bool maxspeed_valid_source(extendedTagList& taglist, const char *tag) {
@@ -341,6 +366,7 @@ class WayHandler : public osmium::handler::Handler {
 					"DE:zone", "DE:bicycle_road",
 					"DE:zone30", "DE:zone:30",
 					"DE:zone20", "DE:zone:20",
+					"DE:zone10", "DE:zone:10",
 				});
 		}
 
@@ -355,9 +381,12 @@ class WayHandler : public osmium::handler::Handler {
 				writer.writeWay(L_WP, way, "steelline", "maxspeed:type=%s is unknown",
 					taglist.get_value_by_key("maxspeed:type"));
 			}
+
+			maxspeed_check_against_type(way, taglist, "maxspeed:type");
 		}
 
 		void tag_source_maxspeed(osmium::Way& way, extendedTagList& taglist) {
+
 			// maxspeed:source:forward
 			// maxspeed:source:backward
 			//
@@ -367,6 +396,36 @@ class WayHandler : public osmium::handler::Handler {
 			if (!maxspeed_valid_source(taglist, "source:maxspeed")) {
 				writer.writeWay(L_WP, way, "steelline", "source:maxspeed=%s is unknown",
 					taglist.get_value_by_key("source:maxspeed"));
+			}
+
+			maxspeed_check_against_type(way, taglist, "source:maxspeed");
+		}
+
+		void maxspeed_check_against_type(osmium::Way& way, extendedTagList& taglist, const char *origin) {
+			auto maxspeedfromtype=taglist.maxspeed_from_maxspeed_type_tag(origin);
+
+			if (maxspeedfromtype == nullptr)
+				return;
+
+			if (taglist.has_key("maxspeed")) {
+				auto maxspeed=taglist.get_value_by_key("maxspeed");
+				if (0 != std::strcmp(maxspeed, maxspeedfromtype)) {
+					writer.writeWay(L_WP, way, "steelline", "%s=%s is %s but maxspeed contains %s",
+						origin,
+						taglist.get_value_by_key(origin),
+						maxspeedfromtype,
+						maxspeed);
+
+					// std::cerr << "Mismatch " << maxspeed << " from type " << maxspeedfromtype << std::endl;
+				}
+
+
+			} else {
+				writer.writeWay(L_WP, way, "steelline", "%s=%s is %s but no maxspeed",
+					origin, taglist.get_value_by_key(origin),
+					maxspeedfromtype);
+
+				// std::cerr << "No maxspeed - from type " << maxspeedfromtype << std::endl;
 			}
 		}
 
