@@ -119,11 +119,11 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 				<< " version=" << way.version()
 				<< std::endl;
 
-		} catch (gdalcpp::gdal_error) {
+		} catch (const gdalcpp::gdal_error& e) {
 			std::cerr << "gdal_error while creating feature wayid " << way.id()<< std::endl;
-		} catch (osmium::invalid_location) {
+		} catch (const osmium::invalid_location& e) {
 			std::cerr << "invalid location wayid " << way.id() << std::endl;
-		} catch (osmium::geometry_error) {
+		} catch (const osmium::geometry_error& e) {
 			std::cerr << "geometry error wayid " << way.id() << std::endl;
 		}
 	}
@@ -206,7 +206,7 @@ class extendedTagList  {
 			double result=std::numeric_limits<double>::quiet_NaN();
 			try {
 				result=std::stof(get_value_by_key(key), nullptr);
-			} catch(std::invalid_argument) {
+			} catch(const std::invalid_argument& e) {
 			}
 			return result;
 		}
@@ -225,7 +225,7 @@ class extendedTagList  {
 
 				if (pos != strlen(value))
 					return std::numeric_limits<int>::max();
-			} catch(std::invalid_argument) {
+			} catch(const std::invalid_argument& e) {
 			}
 			return result;
 		}
@@ -450,7 +450,7 @@ class WayHandler : public osmium::handler::Handler {
 
 					try {
 						std::stoi(taglist.get_value_by_key(key.c_str()), nullptr, 10);
-					} catch(std::invalid_argument) {
+					} catch(const std::invalid_argument& e) {
 						writer.writeWay(L_WP, way, "steelline", "%s=%s is not numerical",
 								key.c_str(), taglist[key.c_str()]);
 					}
