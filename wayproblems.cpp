@@ -1363,7 +1363,7 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
-		bool highway_wecare(osmium::Way& way, extendedTagList& taglist) {
+		bool highway_wecare(extendedTagList& taglist) {
 			if (!taglist.has_key("highway")) {
 				return false;
 			}
@@ -1393,7 +1393,7 @@ class WayHandler : public osmium::handler::Handler {
 			extendedTagList	taglist(way.tags());
 
 			/* Skip highway=bus_stop */
-			if (!highway_wecare(way, taglist))
+			if (!highway_wecare(taglist))
 				return;
 
 			circular_way(way, taglist);
