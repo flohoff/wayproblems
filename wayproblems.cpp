@@ -678,7 +678,8 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.key_value_in_list("highway", { "stop", "give_way",
 					"street_lamp", "traffic_lights", "traffic_calming",
 					"traffic_mirror", "speed_camera", "passing_place",
-					"mini_roundabout", "emergency_access_point", "bus_stop"})) {
+					"mini_roundabout", "emergency_access_point", "bus_stop",
+					"turning_loop", "turning_circle", "toll_gantry" })) {
 
 				writer.writeWay(L_WP, way, "default", "highway=%s should only be used on nodes",
 						taglist.get_value_by_key("highway"));
