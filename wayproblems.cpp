@@ -371,9 +371,6 @@ class WayHandler : public osmium::handler::Handler {
 		}
 
 		void tag_maxspeed_type(osmium::Way& way, extendedTagList& taglist) {
-			// maxspeed:source:forward
-			// maxspeed:source:backward
-			//
 			if (!taglist.has_key("maxspeed:type"))
 				return;
 
@@ -386,10 +383,6 @@ class WayHandler : public osmium::handler::Handler {
 		}
 
 		void tag_source_maxspeed(osmium::Way& way, extendedTagList& taglist) {
-
-			// maxspeed:source:forward
-			// maxspeed:source:backward
-			//
 			if (!taglist.has_key("source:maxspeed"))
 				return;
 
@@ -677,6 +670,22 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
+		void node_only_tags(osmium::Way& way, extendedTagList& taglist) {
+			if (taglist.has_key("noexit")) {
+				writer.writeWay(L_WP, way, "default", "noexit=* should only be used on nodes");
+			}
+
+			if (taglist.key_value_in_list("highway", { "stop", "give_way",
+					"street_lamp", "traffic_lights", "traffic_calming",
+					"traffic_mirror", "speed_camera", "passing_place",
+					"mini_roundabout", "emergency_access_point", "bus_stop"})) {
+
+				writer.writeWay(L_WP, way, "default", "highway=%s should only be used on nodes",
+						taglist.get_value_by_key("highway"));
+
+			}
+		}
+
 		void tag_oneway(osmium::Way& way, extendedTagList& taglist) {
 
 			if (taglist.key_value_is_false("oneway")) {
@@ -713,9 +722,6 @@ class WayHandler : public osmium::handler::Handler {
 						}
 					}
 
-					if (taglist.key_value_is_true("noexit")) {
-						writer.writeWay(L_DEFAULTS, way, "default", "noexit=yes on oneway is broken");
-					}
 				}
 
 				/* Elements which dont make sense on reversed oneway */
@@ -827,9 +833,6 @@ class WayHandler : public osmium::handler::Handler {
 				}
 				if (taglist.has_key("oneway")) {
 					writer.writeWay(L_DEFAULTS, way, "redundant", "oneway on roundabout is default");
-				}
-				if (taglist.key_value_is_true("noexit")) {
-					writer.writeWay(L_DEFAULTS, way, "default", "noexit=yes on roundabout is broken");
 				}
 				if (taglist.key_value_in_list("sidewalk", { "both", "yes", "left" })) {
 					writer.writeWay(L_WP, way, "default", "sidewalk=%s on roundabout - Right hand drive countries should have only a right sidewalk",
@@ -1300,15 +1303,6 @@ class WayHandler : public osmium::handler::Handler {
 			}
 		}
 
-		void highway_motorway(osmium::Way& way, extendedTagList& taglist) {
-			if (!taglist.has_key_value("highway", "motorway"))
-				return;
-
-			if (taglist.key_value_is_true("noexit")) {
-				writer.writeWay(L_DEFAULTS, way, "default", "noexit=yes on motorway is broken");
-			}
-		}
-
 		void highway_track(osmium::Way& way, extendedTagList& taglist) {
 			if (taglist.has_key_value("highway", "track")) {
 				if (taglist.has_key("name")) {
@@ -1420,11 +1414,13 @@ class WayHandler : public osmium::handler::Handler {
 			tag_overtaking(way, taglist);
 			tag_maxwidth(way, taglist);
 			tag_type(way, taglist);
+
 			tag_source_maxspeed(way, taglist);
 			tag_maxspeed_source(way, taglist);
 			tag_maxspeed_type(way, taglist);
 
-			// TODO - noexit
+			node_only_tags(way, taglist);
+
 			// TODO - surface
 			// TODO - smoothness
 			// TODO - incline
@@ -1465,7 +1461,6 @@ class WayHandler : public osmium::handler::Handler {
 			highway_living_street(way, taglist);
 			highway_service(way, taglist);
 			highway_track(way, taglist);
-			highway_motorway(way, taglist);
 
 			// steps
 			// escalators
