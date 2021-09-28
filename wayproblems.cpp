@@ -144,6 +144,20 @@ class extendedTagList  {
 			{ "DE:rural", "100" }
 	};
 
+	const std::map<const std::string, const int> turn_to_priority {
+		{ "sharp_right", 1 },
+		{ "right", 2 },
+		{ "slight_right", 3 },
+		{ "merge_to_right", 4 },
+		{ "through", 5 },
+		{ "none", 5 },
+		{ "merge_to_left", 6 },
+		{ "slight_left", 7 },
+		{ "left", 8 },
+		{ "sharp_left", 9 },
+		{ "reverse", 10 },
+	};
+
 	const std::vector<std::string> highway_should_have_ref_list {
 		"motorway",
 		"trunk",
@@ -285,6 +299,15 @@ class extendedTagList  {
 				return nullptr;
 
 			return maxspeed->second.c_str();
+		}
+
+		int turn_command_priority(const char *turn) {
+			auto prioritypair=turn_to_priority.find(turn);
+
+			if (prioritypair == turn_to_priority.end())
+				return 0;
+
+			return prioritypair->second;
 		}
 };
 
@@ -587,6 +610,27 @@ class WayHandler : public osmium::handler::Handler {
 									key, turnlanes.c_str(), turntype.c_str());
 						}
 					}
+
+					// For order by turn commands - its left to right
+					int prioritylast=99999;
+					std::string turntypelast;
+					std::cerr << " turnlanes " << turnlanes << std::endl;
+					for(auto turntype : turnlanetypes) {
+						int priority=taglist.turn_command_priority(turntype.c_str());
+						std::cerr << "cmd " << turntype << " priority " << priority << std::endl;
+						if (!priority)
+							break;
+
+						if (priority > prioritylast && !turntypelast.empty()) {
+							writer.writeWay(L_WP, way, "default", "%s has turn %s right of %s",
+								turnkey.c_str(), turntype, turntypelast);
+							break;
+						}
+
+						prioritylast=priority;
+						turntypelast=turntype;
+					}
+					std::cerr << std::endl;
 				}
 
 				// TODO turn:lanes are from left to right. So in in Germany the first element cant be
