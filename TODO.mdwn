@@ -30,6 +30,11 @@ Tag combination without spatial relation
 - construction=no
 - highway=* && bicycle=yes
 - maxspeed != maxspeed:type based speed
+- highway=stop or highway=give_way on a line
+- unknown highway values
+- steps + maxspeed
+- steps + access tags for vehicles
+- cycleway=no cycleway:left!=no
 
 - noexit?
 
