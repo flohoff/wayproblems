@@ -413,6 +413,16 @@ class WayHandler : public osmium::handler::Handler {
 			maxspeed_check_against_type(way, taglist, "maxspeed:type");
 		}
 
+		void tag_zone_traffic(osmium::Way& way, extendedTagList& taglist) {
+			if (!taglist.has_key("zone:traffic"))
+				return;
+
+			if (!taglist.key_value_in_list(tag, { "DE:urban", "DE:rural", "DE:motorway" })) {
+				writer.writeWay(L_WP, way, "steelline", "zone:traffic=%s is unknown",
+					taglist.get_value_by_key("zone:traffic"));
+			}
+		}
+
 		void tag_source_maxspeed(osmium::Way& way, extendedTagList& taglist) {
 			if (!taglist.has_key("source:maxspeed"))
 				return;
