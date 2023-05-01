@@ -30,9 +30,9 @@ buildlatestdep:
     - ( cd build ; cmake .. )
     - make -C build
 
-buildstretch:
+buildbookworm:
   stage: build
-  image: amd64/debian:stretch
+  image: amd64/debian:bookworm
   variables:
     DEBIAN_FRONTEND: "noninteractive"
     GIT_SUBMODULE_STRATEGY: recursive
