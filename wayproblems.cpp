@@ -48,6 +48,7 @@ enum layerid {
 	L_STRANGE,
 	L_CYCLING,
 	L_MAXSPEED,
+	L_ZONETRAFFIC,
 	layermax
 };
 
@@ -71,6 +72,7 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 			addLineStringLayer(L_STRANGE, "strange");
 			addLineStringLayer(L_CYCLING, "cycling");
 			addLineStringLayer(L_MAXSPEED, "maxspeed");
+			addLineStringLayer(L_ZONETRAFFIC, "zonetraffic");
 			addLineStringLayer(L_DEFAULTS, "defaults");
 		}
 
@@ -433,6 +435,18 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.key_value_in_list("zone:traffic", { "DE:urban", "DE:rural", "DE:motorway" })) {
 				writer.writeWay(L_WP, way, "steelline", "zone:traffic=%s is unknown",
 					taglist.get_value_by_key("zone:traffic"));
+			}
+
+			std::vector<std::string>	zttype;
+			std::string			zonetraffic=taglist.get_value_by_key("zone:traffic");
+			boost::split(zttype, zonetraffic, boost::is_any_of(":"), boost::token_compress_on);
+
+			if (zttype.size() > 1) {
+				if (zttype.at(1) == "urban") {
+					writer.writeWay(L_ZONETRAFFIC, way, "greenline", "zone:traffic=%s", zonetraffic.c_str());
+				} else {
+					writer.writeWay(L_ZONETRAFFIC, way, "violetline", "zone:traffic=%s", zonetraffic.c_str());
+				}
 			}
 		}
 
@@ -1488,6 +1502,7 @@ class WayHandler : public osmium::handler::Handler {
 			tag_source_maxspeed(way, taglist);
 			tag_maxspeed_source(way, taglist);
 			tag_maxspeed_type(way, taglist);
+			tag_zone_traffic(way, taglist);
 
 			node_only_tags(way, taglist);
 

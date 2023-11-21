@@ -24,6 +24,10 @@ INSERT INTO "meta" VALUES('style.redundant.color','#007070');
 INSERT INTO "meta" VALUES('style.redundant.weight','3');
 INSERT INTO "meta" VALUES('style.redundant.opacity','0.6');
 
+INSERT INTO "meta" VALUES('style.greenline.color','#66ff66');
+INSERT INTO "meta" VALUES('style.greenline.weight','4');
+INSERT INTO "meta" VALUES('style.greenline.opacity','0.9');
+
 INSERT INTO "meta" VALUES('style.redline.color','#ff0000');
 INSERT INTO "meta" VALUES('style.redline.weight','4');
 INSERT INTO "meta" VALUES('style.redline.opacity','0.9');
@@ -98,7 +102,31 @@ INSERT INTO "meta" VALUES('layer.strange.columns:6','problem');
 INSERT INTO "meta" VALUES('layer.strange.columns:7','style');
 INSERT INTO "meta" VALUES('layer.strange.popup', ( readfile('wayproblems-meta.popup' )) );
 
+INSERT INTO "meta" VALUES('layer.maxspeed.geometrycolumn','geometry');
+INSERT INTO "meta" VALUES('layer.maxspeed.srid','4326');
+INSERT INTO "meta" VALUES('layer.maxspeed.stylecolumn','style');
+INSERT INTO "meta" VALUES('layer.maxspeed.columns:0','id');
+INSERT INTO "meta" VALUES('layer.maxspeed.columns:1','key');
+INSERT INTO "meta" VALUES('layer.maxspeed.columns:2','value');
+INSERT INTO "meta" VALUES('layer.maxspeed.columns:3','changeset');
+INSERT INTO "meta" VALUES('layer.maxspeed.columns:4','user');
+INSERT INTO "meta" VALUES('layer.maxspeed.columns:5','timestamp');
+INSERT INTO "meta" VALUES('layer.maxspeed.columns:6','problem');
+INSERT INTO "meta" VALUES('layer.maxspeed.columns:7','style');
+INSERT INTO "meta" VALUES('layer.maxspeed.popup', ( readfile('wayproblems-meta.popup' )) );
 
+INSERT INTO "meta" VALUES('layer.zonetraffic.geometrycolumn','geometry');
+INSERT INTO "meta" VALUES('layer.zonetraffic.srid','4326');
+INSERT INTO "meta" VALUES('layer.zonetraffic.stylecolumn','style');
+INSERT INTO "meta" VALUES('layer.zonetraffic.columns:0','id');
+INSERT INTO "meta" VALUES('layer.zonetraffic.columns:1','key');
+INSERT INTO "meta" VALUES('layer.zonetraffic.columns:2','value');
+INSERT INTO "meta" VALUES('layer.zonetraffic.columns:3','changeset');
+INSERT INTO "meta" VALUES('layer.zonetraffic.columns:4','user');
+INSERT INTO "meta" VALUES('layer.zonetraffic.columns:5','timestamp');
+INSERT INTO "meta" VALUES('layer.zonetraffic.columns:6','problem');
+INSERT INTO "meta" VALUES('layer.zonetraffic.columns:7','style');
+INSERT INTO "meta" VALUES('layer.zonetraffic.popup', ( readfile('wayproblems-meta.popup' )) );
 
 INSERT INTO "meta" VALUES('layer.defaults.geometrycolumn','geometry');
 INSERT INTO "meta" VALUES('layer.defaults.srid','4326');
