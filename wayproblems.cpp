@@ -47,6 +47,7 @@ enum layerid {
 	L_DEFAULTS,
 	L_STRANGE,
 	L_CYCLING,
+	L_MAXSPEED,
 	layermax
 };
 
@@ -69,6 +70,7 @@ class SpatiaLiteWriter : public osmium::handler::Handler {
 			addLineStringLayer(L_FOOTWAY, "footway");
 			addLineStringLayer(L_STRANGE, "strange");
 			addLineStringLayer(L_CYCLING, "cycling");
+			addLineStringLayer(L_MAXSPEED, "maxspeed");
 			addLineStringLayer(L_DEFAULTS, "defaults");
 		}
 
@@ -387,7 +389,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.has_key("maxspeed:source"))
 				return;
 
-			writer.writeWay(L_WP, way, "steelline", "maxspeed:source should be source:maxspeed or maxspeed:type");
+			writer.writeWay(L_MAXSPEED, way, "steelline", "maxspeed:source should be source:maxspeed or maxspeed:type");
 		}
 
 		bool maxspeed_valid_source(extendedTagList& taglist, const char *tag) {
@@ -406,7 +408,7 @@ class WayHandler : public osmium::handler::Handler {
 				return;
 
 			if (!maxspeed_valid_source(taglist, "maxspeed:type")) {
-				writer.writeWay(L_WP, way, "steelline", "maxspeed:type=%s is unknown",
+				writer.writeWay(L_MAXSPEED, way, "steelline", "maxspeed:type=%s is unknown",
 					taglist.get_value_by_key("maxspeed:type"));
 			}
 
@@ -428,7 +430,7 @@ class WayHandler : public osmium::handler::Handler {
 				return;
 
 			if (!maxspeed_valid_source(taglist, "source:maxspeed")) {
-				writer.writeWay(L_WP, way, "steelline", "source:maxspeed=%s is unknown",
+				writer.writeWay(L_MAXSPEED, way, "steelline", "source:maxspeed=%s is unknown",
 					taglist.get_value_by_key("source:maxspeed"));
 			}
 
@@ -444,7 +446,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (taglist.has_key("maxspeed")) {
 				auto maxspeed=taglist.get_value_by_key("maxspeed");
 				if (0 != std::strcmp(maxspeed, maxspeedfromtype)) {
-					writer.writeWay(L_WP, way, "steelline", "%s=%s is %s but maxspeed contains %s",
+					writer.writeWay(L_MAXSPEED, way, "steelline", "%s=%s is %s but maxspeed contains %s",
 						origin,
 						taglist.get_value_by_key(origin),
 						maxspeedfromtype,
@@ -455,7 +457,7 @@ class WayHandler : public osmium::handler::Handler {
 
 
 			} else {
-				writer.writeWay(L_WP, way, "steelline", "%s=%s is %s but no maxspeed",
+				writer.writeWay(L_MAXSPEED, way, "steelline", "%s=%s is %s but no maxspeed",
 					origin, taglist.get_value_by_key(origin),
 					maxspeedfromtype);
 
@@ -485,7 +487,7 @@ class WayHandler : public osmium::handler::Handler {
 					try {
 						std::stoi(taglist.get_value_by_key(key.c_str()), nullptr, 10);
 					} catch(const std::invalid_argument& e) {
-						writer.writeWay(L_WP, way, "steelline", "%s=%s is not numerical",
+						writer.writeWay(L_MAXSPEED, way, "steelline", "%s=%s is not numerical",
 								key.c_str(), taglist[key.c_str()]);
 					}
 					// TODO - Integer/Decimal/Float?
@@ -498,7 +500,7 @@ class WayHandler : public osmium::handler::Handler {
 					 taglist.has_key("maxspeed:forward")
 					 || taglist.has_key("maxspeed:backward")
 					)) {
-				writer.writeWay(L_WP, way, "steelline", "maxspeed and maxspeed:forward/backward - overlapping values");
+				writer.writeWay(L_MAXSPEED, way, "steelline", "maxspeed and maxspeed:forward/backward - overlapping values");
 			}
 		}
 
