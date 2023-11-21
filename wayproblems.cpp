@@ -188,6 +188,13 @@ class extendedTagList  {
 		"unclassified", "residential"
 		"living_street"
 	};
+
+	const std::vector<std::string> highway_should_have_maxspeed_list {
+		"primary", "primary_link",
+		"secondary", "secondary_link",
+		"tertiary", "tertiary_link"
+	};
+
 	const std::vector<std::string> value_true_list {
 			"yes", "true", "1" };
 
@@ -251,7 +258,11 @@ class extendedTagList  {
 		}
 
 		bool highway_should_have_ref() {
-			return string_in_list(get_value_by_key("highway"), highway_should_have_ref_list);
+			return string_in_list(taglist.get_value_by_key("highway"), highway_should_have_ref_list);
+		}
+
+		bool highway_should_have_maxspeed() {
+			return string_in_list(taglist.get_value_by_key("highway"), highway_should_have_maxspeed_list);
 		}
 
 		bool highway_may_have_ref() {
@@ -389,7 +400,7 @@ class WayHandler : public osmium::handler::Handler {
 			if (!taglist.has_key("maxspeed:source"))
 				return;
 
-			writer.writeWay(L_MAXSPEED, way, "steelline", "maxspeed:source should be source:maxspeed or maxspeed:type");
+			writer.writeWay(L_MAXSPEED, way, "violetline", "maxspeed:source should be source:maxspeed or maxspeed:type");
 		}
 
 		bool maxspeed_valid_source(extendedTagList& taglist, const char *tag) {
@@ -408,7 +419,7 @@ class WayHandler : public osmium::handler::Handler {
 				return;
 
 			if (!maxspeed_valid_source(taglist, "maxspeed:type")) {
-				writer.writeWay(L_MAXSPEED, way, "steelline", "maxspeed:type=%s is unknown",
+				writer.writeWay(L_MAXSPEED, way, "violetline", "maxspeed:type=%s is unknown",
 					taglist.get_value_by_key("maxspeed:type"));
 			}
 
@@ -430,7 +441,7 @@ class WayHandler : public osmium::handler::Handler {
 				return;
 
 			if (!maxspeed_valid_source(taglist, "source:maxspeed")) {
-				writer.writeWay(L_MAXSPEED, way, "steelline", "source:maxspeed=%s is unknown",
+				writer.writeWay(L_MAXSPEED, way, "violetline", "source:maxspeed=%s is unknown",
 					taglist.get_value_by_key("source:maxspeed"));
 			}
 
@@ -466,13 +477,9 @@ class WayHandler : public osmium::handler::Handler {
 		}
 
 		void tag_maxspeed(osmium::Way& way, extendedTagList& taglist) {
-			/*
-			 * Maxspeed
-			 *
-			 */
-
 			const std::vector<const char *>	maxspeedtags={ "maxspeed", "maxspeed:forward", "maxspeed:backward" };
 			const std::vector<const char *>	vehicles={ "", ":hgv", ":vehicle", ":motor_vehicle", ":bus" };
+
 			for(auto maxspeedtag : maxspeedtags) {
 				for(auto vehicle : vehicles) {
 					std::string	key=maxspeedtag;
@@ -496,11 +503,17 @@ class WayHandler : public osmium::handler::Handler {
 				}
 			}
 
-			if (taglist.has_key("maxspeed") && (
-					 taglist.has_key("maxspeed:forward")
-					 || taglist.has_key("maxspeed:backward")
-					)) {
-				writer.writeWay(L_MAXSPEED, way, "steelline", "maxspeed and maxspeed:forward/backward - overlapping values");
+			if (taglist.has_key("maxspeed")) {
+				if (taglist.has_key("maxspeed:forward") || taglist.has_key("maxspeed:backward")) {
+					writer.writeWay(L_MAXSPEED, way, "steelline", "maxspeed and maxspeed:forward/backward - overlapping values");
+				}
+			} 
+
+			// We want maxspeed on all higher class roads
+			if (!(taglist.has_key("maxspeed") || (taglist.has_key("maxspeed:forward") && taglist.has_key("maxspeed:backward")))) {
+				if (taglist.highway_should_have_maxspeed()) {
+					writer.writeWay(L_MAXSPEED, way, "brownline", "maxspeed missing");
+				};
 			}
 		}
 
