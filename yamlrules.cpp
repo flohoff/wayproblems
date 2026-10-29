@@ -8,6 +8,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <iomanip>
+#include <ostream>
 #include <stdexcept>
 
 namespace {
@@ -671,9 +673,16 @@ void RuleEngine::set_known_layers(const std::vector<std::string> &layers) {
 
 void RuleEngine::evaluate(Sink &sink, const TagLookup &tags) {
 	std::map<std::string, std::string> gate_ctx;
+	++m_ways;
 
-	if (m_gate && !cond_true(*m_gate, tags, m_maps, gate_ctx))
-		return;
+	if (m_gate) {
+		if (cond_true(*m_gate, tags, m_maps, gate_ctx))
+			++m_gate_hits;
+		else {
+			++m_gate_misses;
+			return;
+		}
+	}
 
 	for (const auto &rule : m_rules)
 		eval_rule(*rule, sink, tags, std::map<std::string, std::string>{});
@@ -683,10 +692,14 @@ void RuleEngine::evaluate(Sink &sink, const TagLookup &tags) {
 // matched and inherit the context tokens set during its condition evaluation
 // (whoever sets a token last inside a condition wins); every child starts from
 // the parent's state, so siblings never see each other's tokens.
-void RuleEngine::eval_rule(const Rule &rule, Sink &sink, const TagLookup &tags,
-		std::map<std::string, std::string> ctx) const {
-	if (!cond_true(*rule.condition, tags, m_maps, ctx))
+void RuleEngine::eval_rule(Rule &rule, Sink &sink, const TagLookup &tags,
+		std::map<std::string, std::string> ctx) {
+	if (cond_true(*rule.condition, tags, m_maps, ctx)) {
+		++rule.hits;
+	} else {
+		++rule.misses;
 		return;
+	}
 
 	for (const auto &report : rule.reports)
 		sink.report(report.layer, report.style,
@@ -694,6 +707,45 @@ void RuleEngine::eval_rule(const Rule &rule, Sink &sink, const TagLookup &tags,
 
 	for (const auto &child : rule.rules)
 		eval_rule(*child, sink, tags, ctx);
+}
+
+namespace {
+
+// One " rate  %  hits  misses  <indented id>" line.
+void stats_line(std::ostream &out, unsigned long hits, unsigned long misses,
+		int depth, const std::string &id) {
+	unsigned long total = hits + misses;
+	double rate = total ? 100.0 * double(hits) / double(total) : 0.0;
+
+	out << std::fixed << std::setprecision(2) << std::setw(8) << rate << " %"
+		<< std::setw(10) << hits
+		<< std::setw(10) << misses
+		<< std::string(2 * depth + 2, ' ')
+		<< id << '\n';
+}
+
+} // namespace
+
+void RuleEngine::dump_stats_line(const Rule &rule, int depth, std::ostream &out) const {
+	stats_line(out, rule.hits, rule.misses, depth, rule.id);
+}
+
+void RuleEngine::dump_stats(std::ostream &out) const {
+	std::ios saved(nullptr);
+	saved.copyfmt(out);
+
+	out << "\n== rule statistics (" << m_ways << " ways evaluated; hit = \"when\" matched)\n";
+	stats_line(out, m_gate_hits, m_gate_misses, 0, "(gate)");
+
+	std::function<void(const Rule &, int)> walk = [&](const Rule &rule, int depth) {
+		dump_stats_line(rule, depth, out);
+		for (const auto &child : rule.rules)
+			walk(*child, depth + 1);
+	};
+	for (const auto &rule : m_rules)
+		walk(*rule, 0);
+
+	out.copyfmt(saved);
 }
 
 void RuleEngine::load(const std::string &path) {

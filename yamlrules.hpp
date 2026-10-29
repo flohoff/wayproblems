@@ -2,6 +2,7 @@
 #define WAYPROBLEMS_YAMLRULES_HPP
 
 #include <cstddef>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
@@ -35,6 +36,9 @@ class RuleEngine {
 		// Validates report layers; call after writer setup, throws on unknown layer.
 		void set_known_layers(const std::vector<std::string> &layers);
 
+		// Per-rule hit/miss statistics; "hit" = the rule condition matched.
+		void dump_stats(std::ostream &out) const;
+
 		void evaluate(Sink &sink, const TagLookup &tags);
 		size_t size() const { return m_rules.size(); }
 
@@ -53,6 +57,8 @@ class RuleEngine {
 				// Nested rules are evaluated only when this rule's condition
 				// matches; they inherit this rule's context tokens.
 				std::vector<std::unique_ptr<Rule>> rules;
+				unsigned long hits = 0;
+				unsigned long misses = 0;
 
 				~Rule(); // Condition is incomplete here, defined in yamlrules.cpp
 		};
@@ -62,9 +68,13 @@ class RuleEngine {
 		std::vector<std::unique_ptr<Rule>> m_rules;
 		std::vector<std::string> m_layers;
 		std::unique_ptr<Condition> m_gate;
+		unsigned long m_ways = 0;
+		unsigned long m_gate_hits = 0;
+		unsigned long m_gate_misses = 0;
 
-		void eval_rule(const Rule &rule, Sink &sink, const TagLookup &tags,
-				std::map<std::string, std::string> ctx) const;
+		void eval_rule(Rule &rule, Sink &sink, const TagLookup &tags,
+				std::map<std::string, std::string> ctx);
+		void dump_stats_line(const Rule &rule, int depth, std::ostream &out) const;
 };
 
 #endif

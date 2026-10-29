@@ -362,4 +362,7 @@ int main(int argc, char* argv[]) {
 	osmium::io::Reader reader{input_file};
 	osmium::apply(reader, location_handler, handler);
 	reader.close();
+
+	if (vm.count("verbose"))
+		rules.dump_stats(std::cout);
 }
