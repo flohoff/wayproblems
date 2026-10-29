@@ -685,18 +685,6 @@ rules:
           layer: defaults
           style: default
           problem: "embankment=no is default"
-
-  # --- zone:traffic ------------------------------------------------------------------
-  # The numeric part split (zone:traffic=DE:urban etc) stays in C++ for now.
-  - id: zone-traffic-unknown-value
-    when:
-      has_key: "zone:traffic"
-      not_in: {key: "zone:traffic", values: ["DE:urban", "DE:rural", "DE:motorway"]}
-    report:
-      layer: wayproblems
-      style: steelline
-      problem: "zone:traffic=${zone:traffic} is unknown"
-
   # --- access tags "on" public roads ------------------------------------------------------
   # Note: the C++ list had a missing comma bug ("residential" "living_street" were
   # concatenated to one string) - this list is the corrected version.
@@ -917,23 +905,34 @@ rules:
       problem: "maxspeed:type=${maxspeed:type} is ${_mapped} but no maxspeed"
 
   # --- zone:traffic split ------------------------------------------------------------
-  - id: zone-traffic-urban
+  - id: zone-traffic
     when:
-      has_index: {key: "zone:traffic", sep: ":", index: 1}
-      element_eq: {key: "zone:traffic", sep: ":", index: 1, value: urban}
-    report:
-      layer: zonetraffic
-      style: greenline
-      problem: "zone:traffic=${zone:traffic}"
-
-  - id: zone-traffic-other
-    when:
-      has_index: {key: "zone:traffic", sep: ":", index: 1}
-      not: {element_eq: {key: "zone:traffic", sep: ":", index: 1, value: urban}}
-    report:
-      layer: zonetraffic
-      style: violetline
-      problem: "zone:traffic=${zone:traffic}"
+      has_key: "zone:traffic"
+    rules:
+      - id: zone-traffic-urban
+        when:
+          has_index: {key: "zone:traffic", sep: ":", index: 1}
+          element_eq: {key: "zone:traffic", sep: ":", index: 1, value: urban}
+        report:
+          layer: zonetraffic
+          style: greenline
+          problem: "zone:traffic=${zone:traffic}"
+      - id: zone-traffic-other
+        when:
+          has_index: {key: "zone:traffic", sep: ":", index: 1}
+          not: {element_eq: {key: "zone:traffic", sep: ":", index: 1, value: urban}}
+        report:
+          layer: zonetraffic
+          style: violetline
+          problem: "zone:traffic=${zone:traffic}"
+      - id: zone-traffic-unknown-value
+        when:
+          has_key: "zone:traffic"
+          not_in: {key: "zone:traffic", values: ["DE:urban", "DE:rural", "DE:motorway"]}
+        report:
+          layer: wayproblems
+          style: steelline
+          problem: "zone:traffic=${zone:traffic} is unknown"
 
   # --- lanes= --------------------------------------------------------------------------
   # The keys: on the parent expands every child per lane key; children inherit
