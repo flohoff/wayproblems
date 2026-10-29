@@ -33,13 +33,20 @@ else()
 	include_directories(${YAML_CPP_INCLUDE_DIRS})
 endif()
 
-find_package(nlohmann_json 3.9 REQUIRED)
+find_path(JSON_INCLUDE_DIR
+	NAMES "nlohmann/json.hpp"
+	PATHS
+	/usr/include/
+	/usr/include/
+	${CMAKE_SOURCE_DIR}/json/include
+	${CMAKE_SYSROOT}/usr/local/include
+	)
+message("nlohmann directory ${JSON_INCLUDE_DIR}")
 
 add_executable(wayproblems wayproblems.cpp yamlrules.cpp)
 add_executable(accesscombinations accesscombinations.cpp)
-include_directories(${OSMIUM_INCLUDE_DIRS})
-include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${OSMIUM_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${JSON_INCLUDE_DIR})
 include_directories(SYSTEM ${PROTOZERO_INCLUDE_DIR})
-target_link_libraries(wayproblems ${OSMIUM_LIBRARIES} ${Boost_LIBRARIES} ${YAML_CPP_LIB} nlohmann_json::nlohmann_json)
+target_link_libraries(wayproblems ${OSMIUM_LIBRARIES} ${Boost_LIBRARIES} ${YAML_CPP_LIB})
 target_link_libraries(accesscombinations ${OSMIUM_LIBRARIES} ${Boost_LIBRARIES})
 
