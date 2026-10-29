@@ -1,0 +1,1556 @@
+---
+# Rule configuration for wayproblems.
+#
+# Condition operators ("when"):
+#   has_key / missing_key: KEY            condition "on" presence of a tag
+#   eq: {key: KEY, value: VALUE}          tag equals string value
+#   in / not_in: {key: KEY, values: [..]} tag value in a list of values
+#   in / not_in: {key: KEY, list: NAME}   tag value in named list from lists:
+#   is_true: KEY / is_false: KEY          value in "yes"/"true"/1 or "no"/"false"/0
+#   is_int / not_int: KEY                 value is (not) an integer
+#   is_double / not_double: KEY           value is (not) a floating point number
+#   lt / gt / lte / gte: {key: KEY, value: NUMBER}
+#                                         numeric comparison, int or double
+# Combinators: all: [...], any: [...], not: <condition>. Several conditions in
+# one "when" mapping are ANDed.
+#
+# A rule can carry "keys: [...]" (or a named list) and use "{key}" as the key
+# in conditions; it then fires once per key. In "problem" texts ${KEY} is
+# replaced with the tag value KEY, ${key} and ${value} with the rule key and
+# its tag value. Missing tags leave the ${token} untouched.
+#
+#   fact: FACT                            non-tag fact, e.g. "closed" (way geometry)
+#   parses_int / not_parses_int: KEY      value starts with an integer (std::stoi
+#                                         compatible, trailing garbage ignored)
+#   map_lookup: {key: KEY, map: NAME}     source tag value found in map NAME,
+#                                         mapped value available as ${_mapped}
+#   map_neq: {key: KEY, map: NAME, against: KEY2}
+#                                         mapped value differs from tag KEY2
+#   elements_not_match: {other: KEY, sep: "S"}
+#                                         int value of the rule key differs from
+#                                         the number of separated elements in KEY
+#   any_element_not_in: {key: KEY, sep: "S", list/values}
+#                                         any separated element of KEY is not in
+#                                         the list (offending element: ${_element},
+#                                         source value: ${_source})
+#   has_turn_inversion: {key: KEY, sep: "S", map: NAME}
+#                                         priority (from map NAME) of two adjacent
+#                                         separated elements increases (${_prev},
+#                                         ${_next}); stops at unknown elements
+#   has_index: {key: KEY, sep: "S", index: N}
+#                                         KEY has at least N+1 separated elements
+#   element_eq: {key: KEY, sep: "S", index: N, value: V}
+#                                         the Nth separated element of KEY is V
+#   sum_neq: {key: KEY, parts: [K1, K2]}  value of KEY differs from sum of parts
+# Named lists are defined under lists: and referenced via list: NAME.
+# Key/value maps are defined under maps: and referenced via map: NAME.
+# A rule reports via report: {layer:, style:, problem:} - a rule may report
+# several times by using a list of report mappings.
+#
+# The top level "gate:" condition is evaluated once per way; if it fails no
+# rule is evaluated at all (the C++ highway_wecare() filter).
+# Context tokens set during evaluation: ${_mapped}, ${_prev}, ${_next},
+# ${_element}, ${_source}, ${_other_key}, ${_other_value}.
+
+lists:
+  node_only_highway: [stop, give_way, street_lamp, traffic_lights, traffic_calming,
+                      traffic_mirror, speed_camera, passing_place, mini_roundabout,
+                      emergency_access_point, bus_stop, turning_loop, turning_circle,
+                      toll_gantry]
+  highway_public: [motorway, motorway_link, trunk, trunk_link, primary, primary_link,
+                   secondary, secondary_link, tertiary, tertiary_link, unclassified,
+                   residential, living_street]
+  highway_should_have_ref: [motorway, trunk, primary, secondary]
+  highway_may_have_ref: [motorway, trunk, primary, secondary, tertiary]
+  highway_no_sidewalk: [motorway, motorway_link, trunk]
+  highway_shoulder: [path, footway, cycleway, track, steps, pedestrian, bridleway]
+  bridge_yes: ["yes", "true", "1"]
+  tunnel_yes: ["yes", "true", "1", avalanche_protector, building_passage]
+  sidewalk_known: [both, left, right, none, "no", "yes", separate]
+  sidewalk_present: [both, left, right, "yes"]
+  tracktype_known: [grade1, grade2, grade3, grade4, grade5]
+  surface_paved: [paved, cobblestone, asphalt, "asphalt:lanes", paving_stones,
+                  concrete, "concrete:lanes"]
+  footway_deprecated: [both, left, right, none]
+  maxheight_exempt: [default, none, unsigned, no_sign, no_indications, below_default]
+  lit_known: ["no", "yes", limited, "24/7", automatic]
+  lit_on: ["yes", limited, "24/7", automatic]
+  cutting_yes: ["yes", "1", "true", left, right]
+  cutting_no: ["no", "0", "false"]
+  embankment_yes: ["yes", "1", "true"]
+  embankment_no: ["no", "0", "false"]
+  overtaking_known: ["no", "yes", caution, both, forward, backward]
+  cycleway_opposite: [opposite, opposite_lane, opposite_track, opposite_share_busway]
+  oneway_yes: ["yes", "true", "1"]
+  restricted_access: [permissive, private, customers]
+  accesstags: [access, vehicle, motor_vehicle, motorcycle, motorcar, hgv, psv,
+               goods, mofa, moped, horse]
+  highway_motorway: [motorway, motorway_link]
+  highway_should_have_maxspeed: [primary, primary_link, secondary, secondary_link,
+                                 tertiary, tertiary_link]
+  circular_highway: [tertiary, secondary, primary, unclassified, residential]
+  maxspeed_source_known: [sign, signals, DE:motorway, DE:urban, DE:rural, DE:zone,
+                          DE:bicycle_road, "DE:zone30", "DE:zone:30", "DE:zone20",
+                          "DE:zone:20", "DE:zone10", "DE:zone:10"]
+  construction_known: ["yes", "no", widening, minor, motorway, motorway_link, trunk,
+                       trunk_link, primary, primary_link, secondary, secondary_link,
+                       tertiary, tertiary_link, unclassified, residential,
+                       pedestrian, service, track, cycleway, footway, steps, path]
+  construction_osrm_ok: ["no", widening, minor]
+  hazmat_known: ["no", "yes", destination, designated]
+  hazmat_blanket: ["yes", destination, designated]
+  hazmat_nonet: [track, path, footway, cycleway, pedestrian]
+  hazmat_likely_nonet: [living_street, service]
+  false_values: ["no", "false", "0"]
+  bicycle_values: ["yes", "no", private, permissive, destination, designated,
+                   use_sidepath, dismount]
+  bicycle_no: ["no", "0", "false"]
+  bicycle_broken_on_cycleway: ["no", "0", "false", private, permissive, use_sidepath,
+                               destination, customers, unknown, lane, allowed,
+                               limited]
+  foot_values: ["yes", "no", private, permissive, destination, designated, use_sidepath]
+  turn_valid_types: [left, right, slight_left, slight_right, through,
+                     merge_to_left, merge_to_right, reverse, none,
+                     sharp_left, sharp_right, ""]
+  lane_keys: [lanes, "lanes:forward", "lanes:backward"]
+  maxspeed_keys: [maxspeed, "maxspeed:hgv", "maxspeed:vehicle",
+                  "maxspeed:motor_vehicle", "maxspeed:bus",
+                  "maxspeed:forward", "maxspeed:forward:hgv",
+                  "maxspeed:forward:vehicle", "maxspeed:forward:motor_vehicle",
+                  "maxspeed:forward:bus",
+                  "maxspeed:backward", "maxspeed:backward:hgv",
+                  "maxspeed:backward:vehicle", "maxspeed:backward:motor_vehicle",
+                  "maxspeed:backward:bus"]
+  path_access_keys: [motorcar, goods, hgv, psv, motor_vehicle, agricultural,
+                     atv, bus]
+  cycleway_defno_keys: [motor_vehicle, motorcar, motorcycle, hgv, psv, horse, foot]
+  track_access_keys: [motorcycle, motorcar, hgv, psv, motor_vehicle, vehicle]
+  roundabout_sidewalk: [both, "yes", left]
+  highway_wecare: [motorway, motorway_link, trunk, trunk_link, primary,
+                   primary_link, secondary, secondary_link, tertiary,
+                   tertiary_link, unclassified, residential, living_street,
+                   footway, cycleway, path, bridleway, service, track, road,
+                   pedestrian, steps, construction]
+
+maps:
+  maxspeed_types:
+    "DE:zone30": "30"
+    "DE:zone:30": "30"
+    "DE:zone20": "20"
+    "DE:zone:20": "20"
+    "DE:zone10": "10"
+    "DE:zone:10": "10"
+    "DE:bicycle_road": "30"
+    "DE:urban": "50"
+    "DE:rural": "100"
+  turn_priority:
+    sharp_right: "1"
+    right: "2"
+    slight_right: "3"
+    merge_to_left: "4"
+    through: "5"
+    none: "5"
+    merge_to_right: "6"
+    slight_left: "7"
+    left: "8"
+    sharp_left: "9"
+    reverse: "10"
+
+# Everything here only applies to real highways.
+gate:
+  has_key: highway
+  in: {key: highway, list: highway_wecare}
+
+rules:
+  # --- layer= -----------------------------------------------------------------
+  - id: layer-not-int
+    when: {has_key: layer, not_int: layer}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "layer=${layer} is not integer"
+
+  - id: layer-zero
+    when: {is_int: layer, eq: {key: layer, value: "0"}}
+    report:
+      layer: defaults
+      style: redundant
+      problem: "layer=${layer} is default"
+
+  - id: layer-too-high
+    when: {is_int: layer, gt: {key: layer, value: 10}}
+    report:
+      layer: wayproblems
+      style: redundant
+      problem: "layer=${layer} where num > 10 seems broken"
+
+  - id: layer-too-low
+    when: {is_int: layer, lt: {key: layer, value: -10}}
+    report:
+      layer: wayproblems
+      style: redundant
+      problem: "layer=${layer} where num < -10 seems broken"
+
+  # --- ref= -------------------------------------------------------------------
+  - id: highway-should-have-ref
+    when:
+      in: {key: highway, list: highway_should_have_ref}
+      not: {eq: {key: junction, value: roundabout}}
+      missing_key: ref
+    report:
+      layer: ref
+      style: ref
+      problem: "highway should have ref"
+
+  - id: highway-should-not-have-ref
+    when:
+      has_key: ref
+      not_in: {key: highway, list: highway_may_have_ref}
+      not: {eq: {key: highway, value: path}}
+    report:
+      layer: ref
+      style: ref
+      problem: "highway should not have ref"
+
+  - id: ref-broken-value
+    when:
+      has_key: ref
+      in: {key: ref, values: ["-", "+", "*", ".", "_", " ", "\t", "#"]}
+    report:
+      - {layer: ref, style: ref, problem: "ref=${ref} seems broken"}
+      - {layer: wayproblems, style: ref, problem: "ref=${ref} seems broken"}
+
+  # --- maxheight= / maxwidth= -------------------------------------------------
+  - id: maxheight-not-float
+    when:
+      has_key: maxheight
+      not_in: {key: maxheight, list: maxheight_exempt}
+      not_double: maxheight
+    report:
+      layer: wayproblems
+      style: default
+      problem: "maxheight=${maxheight} is not float"
+
+  - id: maxheight-low
+    when: {is_double: maxheight, lt: {key: maxheight, value: 1.8}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "maxheight=${maxheight} is less than 1.8"
+
+  - id: maxheight-high
+    when: {is_double: maxheight, gt: {key: maxheight, value: 7}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "maxheight=${maxheight} is more than 7 - suspicous value"
+
+  - id: maxwidth-not-float
+    when:
+      has_key: maxwidth
+      not_double: maxwidth
+    report:
+      layer: wayproblems
+      style: default
+      problem: "maxwidth=${maxwidth} is not float"
+
+  - id: maxwidth-low
+    when: {is_double: maxwidth, lt: {key: maxwidth, value: 1.8}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "maxwidth=${maxwidth} is less than 1.8"
+
+  - id: maxwidth-high
+    when: {is_double: maxwidth, gt: {key: maxwidth, value: 7}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "maxwidth=${maxwidth} is more than 7 - suspicous value"
+
+  # --- lit= -------------------------------------------------------------------
+  - id: lit-unknown-value
+    when: {has_key: lit, not_in: {key: lit, list: lit_known}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "lit=${lit} is not in known value list"
+
+  - id: lit-on-track
+    when:
+      - in: {key: lit, list: lit_on}
+      - in: {key: highway, values: [track]}
+    report:
+      layer: strange
+      style: default
+      problem: "lit=${lit} on highway=${highway} is strange"
+
+  # --- shoulder= --------------------------------------------------------------
+  - id: shoulder-unknown-value
+    when: {has_key: shoulder, not_in: {key: shoulder, values: [both, left, right, "no", "yes"]}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "shoulder=${shoulder} not in known value list"
+
+  - id: shoulder-on-path
+    when: {has_key: shoulder, in: {key: highway, list: highway_shoulder}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=${highway} should not have shoulder=${shoulder}"
+
+  # --- segregated= ------------------------------------------------------------
+  - id: segregated-wrong-highway
+    when:
+      has_key: segregated
+      not_in: {key: highway, values: [footway, cycleway, path]}
+    report:
+      layer: cycling
+      style: default
+      problem: "highway=${highway} and segregated=${segregated} - segregated only used on foot/cycleway and path"
+
+  - id: segregated-unknown-value
+    when: {has_key: segregated, not_in: {key: segregated, values: ["yes", "no"]}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "segregated=${segregated} - value not in known value list"
+
+  # --- oneway -----------------------------------------------------------------
+  - id: oneway-no-is-default
+    when: {is_false: oneway}
+    report:
+      layer: defaults
+      style: redundant
+      problem: "oneway=no is default"
+
+  - id: non-oneway-with-lanekey
+    keys: ["turn:lanes", destination, "destination:lanes"]
+    when:
+      has_key: "{key}"
+      any:
+        - missing_key: oneway
+        - in: {key: oneway, values: ["no", "0"]}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key} makes only sense on oneway streets"
+
+  - id: non-oneway-with-cycleway-opposite
+    keys: [cycleway, "cycleway:left", "cycleway:right"]
+    when:
+      in: {key: "{key}", list: cycleway_opposite}
+      any:
+        - missing_key: oneway
+        - in: {key: oneway, values: ["no", "0"]}
+    report:
+      layer: cycling
+      style: default
+      problem: "${key}=${value} makes only sense on oneway streets"
+
+  - id: backward-key-on-oneway
+    keys: ["turn:lanes:backward", "destination:backward", "destination:lanes:backward", "maxspeed:backward"]
+    when: {has_key: "{key}", in: {key: oneway, list: oneway_yes}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key} on oneway=${oneway} makes no sense"
+
+  - id: forward-key-on-reversed-oneway
+    keys: ["turn:lanes:forward", "destination:forward", "destination:lanes:forward", "maxspeed:forward"]
+    when: {has_key: "{key}", eq: {key: oneway, value: "-1"}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key} on oneway=${oneway} makes no sense"
+
+  # --- proposed -----------------------------------------------------------------
+  - id: proposed-on-highway
+    when:
+      - has_key: proposed
+      - has_key: highway
+    report:
+      layer: wayproblems
+      style: default
+      problem: "proposed=${proposed} on highway=${highway} causes OSRM to avoid road"
+
+  # --- tracktype= -------------------------------------------------------------
+  - id: tracktype-on-non-track
+    when:
+      has_key: tracktype
+      not: {eq: {key: highway, value: track}}
+    report:
+      layer: wayproblems
+      style: brownline
+      problem: "tracktype=* on non track"
+
+  - id: tracktype-unknown-value
+    when: {has_key: tracktype, not_in: {key: tracktype, list: tracktype_known}}
+    report:
+      layer: wayproblems
+      style: brownline
+      problem: "tracktype=${tracktype} is unknown"
+
+  - id: tracktype-grade1-unpaved
+    when:
+      has_key: surface
+      eq: {key: tracktype, value: grade1}
+      not_in: {key: surface, list: surface_paved}
+    report:
+      layer: wayproblems
+      style: brownline
+      problem: "tracktype=${tracktype} with surface=${surface} is an suspicious combination"
+
+  - id: tracktype-grade-paved
+    when:
+      - has_key: surface
+      - in: {key: tracktype, values: [grade3, grade4, grade5]}
+      - in: {key: surface, list: surface_paved}
+    report:
+      layer: wayproblems
+      style: brownline
+      problem: "tracktype=${tracktype} with surface=${surface} is a suspicious combination"
+
+  # --- footway= -----------------------------------------------------------------
+  - id: footway-deprecated-value
+    when: {in: {key: footway, list: footway_deprecated}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "footway=${footway} on highway=${highway} is deprecated - replaced by sidewalk="
+
+  - id: footway-on-non-footway
+    when:
+      has_key: footway
+      not_in: {key: footway, list: footway_deprecated}
+      not: {eq: {key: highway, value: footway}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "footway=${footway} on non highway=footway"
+
+  - id: footway-unknown-value
+    when:
+      - has_key: footway
+      - not_in: {key: footway, list: footway_deprecated}
+      - eq: {key: highway, value: footway}
+      - not_in: {key: footway, values: [sidewalk, crossing]}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "footway=${footway} is unknown value"
+
+  # --- overtaking= --------------------------------------------------------------
+  - id: overtaking-unknown-value
+    keys: [overtaking, "overtaking:forward", "overtaking:backward"]
+    when: {has_key: "{key}", not_in: {key: "{key}", list: overtaking_known}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key}=${value} value not in known list"
+
+  - id: overtaking-forward-broken
+    when: {in: {key: "overtaking:forward", values: [both, backward]}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "overtaking:forward=${overtaking:forward} is broken"
+
+  - id: overtaking-backward-broken
+    when: {in: {key: "overtaking:backward", values: [both, forward]}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "overtaking:backward=${overtaking:backward} is broken"
+
+  # --- type= --------------------------------------------------------------------
+  - id: type-route-on-way
+    when: {eq: {key: type, value: route}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "type=${type} is defined for route relations not ways"
+
+  - id: type-strange-on-way
+    when: {has_key: type, not: {eq: {key: type, value: route}}}
+    report:
+      layer: strange
+      style: default
+      problem: "type=${type} is strange"
+
+  # --- node only tags -------------------------------------------------------------
+  - id: noexit-on-way
+    when: {has_key: noexit}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "noexit=* should only be used on nodes"
+
+  - id: node-only-highway-on-way
+    when: {in: {key: highway, list: node_only_highway}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=${highway} should only be used on nodes"
+
+  # --- stray tags -----------------------------------------------------------------
+  - id: entrance-on-way
+    when: {has_key: entrance}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "entrance=* is not used on highways but on nodes"
+
+  - id: waterway-on-way
+    when: {has_key: waterway}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "waterway=${waterway} is incompatible with a street"
+
+  - id: building-on-way
+    when: {has_key: building}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "building=${building} is incompatible with a street"
+
+  - id: goods-on-way
+    when: {has_key: goods}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "goods=* is not in use in Germany - did you mean hgv="
+
+  # --- highway=road ---------------------------------------------------------------
+  - id: highway-road-is-temporary
+    when: {eq: {key: highway, value: road}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=road is only a temporary tagging for sat imagery based mapping"
+
+  # --- maxspeed:source ------------------------------------------------------------
+  - id: maxspeed-source-deprecated
+    when: {has_key: "maxspeed:source"}
+    report:
+      layer: maxspeed
+      style: violetline
+      problem: "maxspeed:source should be source:maxspeed or maxspeed:type"
+
+  # --- sidewalk= ------------------------------------------------------------------
+  - id: sidewalk-unknown-value
+    when: {has_key: sidewalk, not_in: {key: sidewalk, list: sidewalk_known}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "sidewalk=${sidewalk} not in known value list"
+
+  - id: sidewalk-on-motorway
+    when:
+      - in: {key: sidewalk, list: sidewalk_present}
+      - in: {key: highway, list: highway_no_sidewalk}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=${highway} and sidewalk=${sidewalk} - most likely an error"
+
+  - id: sidewalk-on-motorroad
+    when:
+      in: {key: sidewalk, list: sidewalk_present}
+      is_true: motorroad
+    report:
+      layer: wayproblems
+      style: default
+      problem: "motorroad=${motorroad} and sidewalk=${sidewalk} - most likely an error"
+
+  # --- cutting= / embankment= -----------------------------------------------------
+  - id: cutting-unknown-value
+    when:
+      has_key: cutting
+      not_in: {key: cutting, values: ["no", "yes", "1", "0", "true", "false", left, right]}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "cutting=${cutting} is not in known value list"
+
+  - id: cutting-with-tunnel
+    when:
+      - in: {key: cutting, list: cutting_yes}
+      - in: {key: tunnel, list: tunnel_yes}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "cutting=${cutting} and tunnel=${tunnel} is broken"
+
+  - id: cutting-with-bridge
+    when:
+      - in: {key: cutting, list: cutting_yes}
+      - in: {key: bridge, list: bridge_yes}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "cutting=${cutting} and bridge=${bridge} is broken"
+
+  - id: cutting-no-is-default
+    when: {in: {key: cutting, list: cutting_no}}
+    report:
+      layer: defaults
+      style: default
+      problem: "cutting=no is default"
+
+  - id: embankment-unknown-value
+    when:
+      has_key: embankment
+      not_in: {key: embankment, values: ["no", "yes", "1", "0", "true", "false"]}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "embankment=${embankment} is not in known value list"
+
+  - id: embankment-with-tunnel
+    when:
+      - in: {key: embankment, list: embankment_yes}
+      - in: {key: tunnel, list: tunnel_yes}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "embankment=${embankment} and tunnel=${tunnel} is broken"
+
+  - id: embankment-with-bridge
+    when:
+      - in: {key: embankment, list: embankment_yes}
+      - in: {key: bridge, list: bridge_yes}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "embankment=${embankment} and bridge=${bridge} is broken"
+
+  - id: embankment-with-cutting
+    when:
+      - in: {key: embankment, list: embankment_yes}
+      - in: {key: cutting, values: ["yes", "1", "true"]}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "embankment=${embankment} and cutting=${cutting} is broken"
+
+  - id: embankment-no-is-default
+    when: {in: {key: embankment, list: embankment_no}}
+    report:
+      layer: defaults
+      style: default
+      problem: "embankment=no is default"
+
+  # --- zone:traffic ------------------------------------------------------------------
+  # The numeric part split (zone:traffic=DE:urban etc) stays in C++ for now.
+  - id: zone-traffic-unknown-value
+    when:
+      has_key: "zone:traffic"
+      not_in: {key: "zone:traffic", values: ["DE:urban", "DE:rural", "DE:motorway"]}
+    report:
+      layer: wayproblems
+      style: steelline
+      problem: "zone:traffic=${zone:traffic} is unknown"
+
+  # --- access tags "on" public roads ------------------------------------------------------
+  # Note: the C++ list had a missing comma bug ("residential" "living_street" were
+  # concatenated to one string) - this list is the corrected version.
+  - id: public-way-restricted-access
+    keys: {list: accesstags}
+    when:
+      - in: {key: highway, list: highway_public}
+      - in: {key: "{key}", list: restricted_access}
+    report:
+      layer: wayproblems
+      style: violetline
+      problem: "highway=${highway} is public way - cant have ${key}=${value} access tags"
+
+  # --- circular ways -------------------------------------------------------------
+  - id: circular-way-not-roundabout
+    when:
+      - fact: closed
+      - not: {eq: {key: area, value: "yes"}}
+      - not: {eq: {key: junction, value: roundabout}}
+      - in: {key: highway, list: circular_highway}
+    report:
+      layer: strange
+      style: default
+      problem: "Circular way without junction=roundabout"
+
+  - id: area-on-unclosed-way
+    when:
+      not: {fact: closed}
+      eq: {key: area, value: "yes"}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "area=yes on unclosed way"
+
+  # --- construction= ---------------------------------------------------------------
+  - id: construction-yes-deprecated
+    when: {eq: {key: construction, value: "yes"}}
+    report:
+      layer: wayproblems
+      style: redundant
+      problem: "construction=yes is deprecated"
+
+  - id: construction-no-default
+    when: {eq: {key: construction, value: "no"}}
+    report:
+      layer: defaults
+      style: redundant
+      problem: "construction=no is default"
+
+  - id: construction-unknown-value
+    when:
+      has_key: construction
+      not_in: {key: construction, list: construction_known}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "construction=${construction} not in known list"
+
+  - id: construction-on-highway
+    when:
+      has_key: construction
+      not: {eq: {key: highway, value: construction}}
+      not_in: {key: construction, list: construction_osrm_ok}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "construction=${construction} on highway=${highway}"
+
+  # --- tunnel= -------------------------------------------------------------------
+  - id: tunnel-no-is-default
+    when: {is_false: tunnel}
+    report:
+      layer: defaults
+      style: redundant
+      problem: "tunnel=no ist default"
+
+  # --- junction=roundabout ----------------------------------------------------------
+  - id: roundabout-with-name
+    when:
+      eq: {key: junction, value: roundabout}
+      has_key: name
+    report:
+      layer: wayproblems
+      style: default
+      problem: "name on roundabout is most likely an error - should not carry name or any street"
+
+  - id: roundabout-with-ref
+    when:
+      eq: {key: junction, value: roundabout}
+      has_key: ref
+    report:
+      layer: wayproblems
+      style: default
+      problem: "ref on roundabout is most likely an error - should not carry ref of any street"
+
+  - id: roundabout-oneway-default
+    when:
+      eq: {key: junction, value: roundabout}
+      has_key: oneway
+    report:
+      layer: defaults
+      style: redundant
+      problem: "oneway on roundabout is default"
+
+  - id: roundabout-sidewalk
+    when:
+      eq: {key: junction, value: roundabout}
+      in: {key: sidewalk, list: roundabout_sidewalk}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "sidewalk=${sidewalk} on roundabout - Right hand drive countries should have only a right sidewalk"
+
+  - id: roundabout-cycleway-opposite
+    when:
+      eq: {key: junction, value: roundabout}
+      in: {key: cycleway, values: [opposite, opposite_lane, opposite_track]}
+    report:
+      layer: cycling
+      style: default
+      problem: "cycleway=${cycleway} on roundabout is broken"
+
+  # --- maxspeed= -------------------------------------------------------------------
+  - id: maxspeed-not-numerical
+    keys: {list: maxspeed_keys}
+    when:
+      has_key: "{key}"
+      not_in: {key: "{key}", values: [none, signals]}
+      not_parses_int: "{key}"
+    report:
+      layer: maxspeed
+      style: steelline
+      problem: "${key}=${value} is not numerical"
+
+  - id: maxspeed-overlapping
+    when:
+      has_key: maxspeed
+      any:
+        - has_key: "maxspeed:forward"
+        - has_key: "maxspeed:backward"
+    report:
+      layer: maxspeed
+      style: steelline
+      problem: "maxspeed and maxspeed:forward/backward - overlapping values"
+
+  - id: maxspeed-missing
+    when:
+      in: {key: highway, list: highway_should_have_maxspeed}
+      not:
+        any:
+          - has_key: maxspeed
+          - all:
+              - has_key: "maxspeed:forward"
+              - has_key: "maxspeed:backward"
+    report:
+      layer: maxspeed
+      style: brownline
+      problem: "maxspeed missing"
+
+  - id: source-maxspeed-unknown
+    when:
+      has_key: "source:maxspeed"
+      not_in: {key: "source:maxspeed", list: maxspeed_source_known}
+    report:
+      layer: maxspeed
+      style: violetline
+      problem: "source:maxspeed=${source:maxspeed} is unknown"
+
+  - id: maxspeed-type-unknown
+    when:
+      has_key: "maxspeed:type"
+      not_in: {key: "maxspeed:type", list: maxspeed_source_known}
+    report:
+      layer: maxspeed
+      style: violetline
+      problem: "maxspeed:type=${maxspeed:type} is unknown"
+
+  - id: source-maxspeed-vs-maxspeed
+    when:
+      has_key: maxspeed
+      map_neq: {key: "source:maxspeed", map: maxspeed_types, against: maxspeed}
+    report:
+      layer: maxspeed
+      style: steelline
+      problem: "source:maxspeed=${source:maxspeed} is ${_mapped} but maxspeed contains ${maxspeed}"
+
+  - id: source-maxspeed-no-maxspeed
+    when:
+      map_lookup: {key: "source:maxspeed", map: maxspeed_types}
+      missing_key: maxspeed
+    report:
+      layer: maxspeed
+      style: steelline
+      problem: "source:maxspeed=${source:maxspeed} is ${_mapped} but no maxspeed"
+
+  - id: maxspeed-type-vs-maxspeed
+    when:
+      has_key: maxspeed
+      map_neq: {key: "maxspeed:type", map: maxspeed_types, against: maxspeed}
+    report:
+      layer: maxspeed
+      style: steelline
+      problem: "maxspeed:type=${maxspeed:type} is ${_mapped} but maxspeed contains ${maxspeed}"
+
+  - id: maxspeed-type-no-maxspeed
+    when:
+      map_lookup: {key: "maxspeed:type", map: maxspeed_types}
+      missing_key: maxspeed
+    report:
+      layer: maxspeed
+      style: steelline
+      problem: "maxspeed:type=${maxspeed:type} is ${_mapped} but no maxspeed"
+
+  # --- zone:traffic split ------------------------------------------------------------
+  - id: zone-traffic-urban
+    when:
+      has_index: {key: "zone:traffic", sep: ":", index: 1}
+      element_eq: {key: "zone:traffic", sep: ":", index: 1, value: urban}
+    report:
+      layer: zonetraffic
+      style: greenline
+      problem: "zone:traffic=${zone:traffic}"
+
+  - id: zone-traffic-other
+    when:
+      has_index: {key: "zone:traffic", sep: ":", index: 1}
+      not: {element_eq: {key: "zone:traffic", sep: ":", index: 1, value: urban}}
+    report:
+      layer: zonetraffic
+      style: violetline
+      problem: "zone:traffic=${zone:traffic}"
+
+  # --- lanes= --------------------------------------------------------------------------
+  - id: lanes-not-integer
+    keys: {list: lane_keys}
+    when:
+      has_key: "{key}"
+      not_int: "{key}"
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key}=${value} is not integer"
+
+  - id: lanes-less-or-zero
+    keys: {list: lane_keys}
+    when:
+      has_key: "{key}"
+      is_int: "{key}"
+      lte: {key: "{key}", value: 0}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key}=${value} is less or equal 0"
+
+  - id: lanes-too-many
+    keys: {list: lane_keys}
+    when:
+      has_key: "{key}"
+      is_int: "{key}"
+      gt: {key: "{key}", value: 8}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key}=${value} is more than 8 - suspicious value"
+
+  - id: lanes-turnlanes-count
+    keys: {list: lane_keys}
+    when:
+      has_key: "{key}"
+      elements_not_match: {other: "turn:{key}", sep: "|"}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key}=${value} does not match elements in ${_other_key}=${_other_value}"
+
+  - id: lanes-destinationlanes-count
+    keys: {list: lane_keys}
+    when:
+      has_key: "{key}"
+      elements_not_match: {other: "destination:{key}", sep: "|"}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key}=${value} does not match elements in ${_other_key}=${_other_value}"
+
+  - id: turn-lanes-unknown-element
+    keys: {list: lane_keys}
+    when:
+      has_key: "turn:{key}"
+      any_element_not_in: {key: "turn:{key}", sep: "|;", list: turn_valid_types}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "${key}=${_source} contains lane turn ${_element} which is unknown"
+
+  - id: turn-lanes-wrong-order
+    keys: {list: lane_keys}
+    when:
+      has_key: "turn:{key}"
+      has_turn_inversion: {key: "turn:{key}", sep: "|;", map: turn_priority}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "turn:${key} has turn ...${_prev}|${_next}..."
+
+  - id: lanes-fwd-bwd-sum
+    when:
+      - is_int: lanes
+      - is_int: "lanes:forward"
+      - is_int: "lanes:backward"
+      - sum_neq: {key: lanes, parts: ["lanes:forward", "lanes:backward"]}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "lanes=${lanes} does not match sum of lanes:backward=${lanes:backward} and lanes:forward=${lanes:forward}"
+
+  # --- hazmat= ---------------------------------------------------------------------------
+  - id: hazmat-unknown-value
+    when:
+      has_key: hazmat
+      not_in: {key: hazmat, list: hazmat_known}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "hazmat=${hazmat} is not in known value list"
+
+  - id: hazmat-on-nonet
+    when:
+      - in: {key: hazmat, list: hazmat_blanket}
+      - in: {key: highway, list: hazmat_nonet}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "hazmat=${hazmat} on highway=${highway} is broken"
+
+  - id: hazmat-on-likely-nonet
+    when:
+      - in: {key: hazmat, list: hazmat_blanket}
+      - in: {key: highway, list: hazmat_likely_nonet}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "hazmat=${hazmat} on highway=${highway} is suspicious"
+
+  - id: hazmat-without-hgv
+    when:
+      - in: {key: hazmat, list: hazmat_blanket}
+      - in: {key: hgv, list: false_values}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "hazmat=${hazmat} with hgv=${hgv} is suspicious"
+
+  # --- bicycle= -----------------------------------------------------------------------------
+  - id: bicycle-default-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      is_true: bicycle
+    report:
+      - {layer: defaults, style: redundant, problem: "bicycle=${bicycle} on highway=${highway} is default"}
+      - {layer: cycling, style: redundant, problem: "bicycle=${bicycle} on highway=${highway} is default"}
+
+  - id: bicycle-permissive-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      eq: {key: bicycle, value: permissive}
+    report:
+      - {layer: defaults, style: redundant, problem: "bicycle=designated on highway=${highway} is default - road is public"}
+      - {layer: cycling, style: redundant, problem: "bicycle=designated on highway=${highway} is default - road is public"}
+
+  - id: bicycle-private-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      eq: {key: bicycle, value: private}
+    report:
+      layer: cycling
+      style: default
+      problem: "bicycle=${bicycle} on highway=${highway} is broken - road is public"
+
+  - id: bicycle-customers-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      eq: {key: bicycle, value: customers}
+    report:
+      layer: cycling
+      style: default
+      problem: "bicycle=${bicycle} on highway=${highway} is broken - road is public"
+
+  - id: bicycle-destination-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      eq: {key: bicycle, value: destination}
+    report:
+      layer: cycling
+      style: default
+      problem: "bicycle=${bicycle} on highway=${highway} is suspicious - StVO would allow vehicle=destination"
+
+  - id: bicycle-redundant-track
+    when:
+      in: {key: highway, values: [track, service]}
+      is_true: bicycle
+    report:
+      - {layer: defaults, style: redundant, problem: "bicycle=${bicycle} on highway=${highway} is redundant"}
+      - {layer: cycling, style: redundant, problem: "bicycle=${bicycle} on highway=${highway} is redundant"}
+
+  - id: bicycle-default-motorway
+    when:
+      - in: {key: highway, values: [trunk, trunk_link, motorway, motorway_link]}
+      - in: {key: bicycle, list: bicycle_no}
+    report:
+      - {layer: defaults, style: redundant, problem: "bicycle=${bicycle} on highway=${highway} is default"}
+      - {layer: cycling, style: redundant, problem: "bicycle=${bicycle} on highway=${highway} is default"}
+
+  - id: bicycle-broken-motorway
+    when:
+      has_key: bicycle
+      in: {key: highway, values: [trunk, trunk_link, motorway, motorway_link]}
+      not_in: {key: bicycle, list: bicycle_no}
+    report:
+      layer: cycling
+      style: default
+      problem: "bicycle=${bicycle} on highway=${highway} is broken"
+
+  - id: bicycle-unknown-value
+    when:
+      has_key: bicycle
+      not_in: {key: bicycle, list: bicycle_values}
+    report:
+      layer: cycling
+      style: default
+      problem: "bicycle=${bicycle} on highway=${highway}"
+
+  # --- foot= ----------------------------------------------------------------------------------
+  - id: foot-default-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      is_true: foot
+    report:
+      layer: defaults
+      style: redundant
+      problem: "foot=${foot} on highway=${highway} is default"
+
+  - id: foot-permissive-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      eq: {key: foot, value: permissive}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "foot=yes on highway=${highway} is default"
+
+  - id: foot-private-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      eq: {key: foot, value: private}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "foot=${foot} on highway=${highway} is broken - road is public"
+
+  - id: foot-customers-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      eq: {key: foot, value: customers}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "foot=${foot} on highway=${highway} is broken - road is public"
+
+  - id: foot-destination-public
+    when:
+      in: {key: highway, list: highway_public}
+      not_in: {key: highway, list: highway_motorway}
+      eq: {key: foot, value: destination}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "foot=${foot} on highway=${highway} is broken - No way StVO can sign this"
+
+  - id: foot-redundant-track
+    when:
+      in: {key: highway, values: [track, service]}
+      is_true: foot
+    report:
+      layer: defaults
+      style: redundant
+      problem: "foot=${foot} on highway=${highway} is default"
+
+  - id: foot-broken-trunk
+    when:
+      in: {key: highway, values: [trunk, trunk_link, motorway, motorway_link]}
+      is_true: foot
+    report:
+      layer: wayproblems
+      style: default
+      problem: "foot=${foot} on highway=${highway} is broken"
+
+  - id: foot-unknown-value
+    when:
+      has_key: foot
+      not_in: {key: foot, list: foot_values}
+    report:
+      layer: strange
+      style: default
+      problem: "foot=${foot} on highway=${highway}"
+
+  # --- access= ----------------------------------------------------------------------------------
+  - id: access-yes-default
+    when: {is_true: access}
+    report:
+      layer: defaults
+      style: violetline
+      problem: "access=yes is default"
+
+  - id: access-public-nonconform
+    when:
+      in: {key: highway, list: highway_public}
+      has_key: access
+      not: {is_true: access}
+    report:
+      layer: wayproblems
+      style: violetline
+      problem: "access=${access} - Nicht StVO konform. Vermutlich motor_vehicle=${access} oder vehicle=${access}"
+
+  # --- motor_vehicle= / vehicle= --------------------------------------------------------------------
+  - id: motor-vehicle-motorcycle-conflict
+    when: {is_true: motor_vehicle, is_false: motorcycle}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "motor_vehicle=yes and motorcycle=no should be motorcar + hgv"
+
+  - id: motor-vehicle-includes-motorcycle
+    when:
+      - is_true: motor_vehicle
+      - is_true: motorcycle
+    report:
+      layer: defaults
+      style: redundant
+      problem: "motor_vehicle=yes includes motorcycle=yes"
+
+  - id: motor-vehicle-motorcar-conflict
+    when: {is_true: motor_vehicle, is_false: motorcar}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "motor_vehicle=yes and motorcar=no should be motorcycle"
+
+  - id: motor-vehicle-includes-motorcar
+    when:
+      - is_true: motor_vehicle
+      - is_true: motorcar
+    report:
+      layer: defaults
+      style: redundant
+      problem: "motor_vehicle=yes includes motorcar=yes"
+
+  - id: motor-vehicle-hgv-conflict
+    when: {is_true: motor_vehicle, is_false: hgv}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "motor_vehicle=yes and hgv=no should be motorcar"
+
+  - id: motor-vehicle-includes-hgv
+    when:
+      - is_true: motor_vehicle
+      - is_true: hgv
+    report:
+      layer: defaults
+      style: redundant
+      problem: "motor_vehicle=yes includes hgv=yes"
+
+  - id: vehicle-motor-vehicle-conflict
+    when: {is_true: vehicle, is_false: motor_vehicle}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "vehicle=yes and motor_vehicle=no should be bicyle"
+
+  - id: vehicle-includes-motor-vehicle
+    when:
+      - is_true: vehicle
+      - is_true: motor_vehicle
+    report:
+      layer: defaults
+      style: redundant
+      problem: "vehicle=yes includes motor_vehicle=yes"
+
+  # --- cycleway=:left / :right ------------------------------------------------------------------------
+  - id: cycleway-sides-no
+    when:
+      - in: {key: "cycleway:left", values: [none, "no", "0"]}
+      - in: {key: "cycleway:right", values: [none, "no", "0"]}
+    report:
+      layer: cycling
+      style: default
+      problem: "cycleway:left + cycleway:right are the same - should be cycleway=no"
+
+  - id: cycleway-side-without-cycleway
+    when:
+      missing_key: cycleway
+      any:
+        - all:
+            - has_key: "cycleway:left"
+            - not_in: {key: "cycleway:left", values: [none, "no", "0"]}
+        - all:
+            - has_key: "cycleway:right"
+            - not_in: {key: "cycleway:right", values: [none, "no", "0"]}
+    report:
+      layer: cycling
+      style: default
+      problem: "way has cycleway:left/right=* and no cycleway=*"
+
+  - id: cycleway-left-side-without-left
+    when:
+      has_key: "cycleway:left"
+      not_in: {key: "cycleway:left", values: [none, "no", "0"]}
+      any:
+        - missing_key: "cycleway:right"
+        - in: {key: "cycleway:right", values: [none, "no", "0"]}
+      not: {eq: {key: cycleway, value: left}}
+    report:
+      layer: cycling
+      style: default
+      problem: "way has cycleway:left=* and no cycleway=left"
+
+  - id: cycleway-right-side-without-right
+    when:
+      has_key: "cycleway:right"
+      not_in: {key: "cycleway:right", values: [none, "no", "0"]}
+      any:
+        - missing_key: "cycleway:left"
+        - in: {key: "cycleway:left", values: [none, "no", "0"]}
+      not: {eq: {key: cycleway, value: right}}
+    report:
+      layer: cycling
+      style: default
+      problem: "way has cycleway:right=* and no cycleway=right"
+
+  - id: cycleway-both-sides-without-both
+    when:
+      - has_key: "cycleway:left"
+      - not_in: {key: "cycleway:left", values: [none, "no", "0"]}
+      - has_key: "cycleway:right"
+      - not_in: {key: "cycleway:right", values: [none, "no", "0"]}
+      - not: {eq: {key: cycleway, value: both}}
+    report:
+      layer: cycling
+      style: default
+      problem: "way has cycleway:right=* and left=* and no cycleway=both"
+
+  # Note: the C++ check "cycleway:left" had a trailing space in the key and never
+  # fired - this rule uses the correct key.
+  - id: cycleway-side-invalid-combination
+    keys: ["cycleway:left", "cycleway:right"]
+    when:
+      has_key: "{key}"
+      not_in: {key: "{key}", values: [sidepath, track, lane]}
+    report:
+      layer: cycling
+      style: default
+      problem: "${key}=${value} invalid combination"
+
+  # --- highway=footway ---------------------------------------------------------------------------------
+  - id: footway-without-bicycle
+    when:
+      eq: {key: highway, value: footway}
+      missing_key: bicycle
+    report:
+      layer: footway
+      style: footway
+      problem: "highway=footway without bicycle=yes/no tag - suspicious combination"
+
+  - id: footway-bicycle-use-sidepath
+    when:
+      - eq: {key: highway, value: footway}
+      - eq: {key: bicycle, value: use_sidepath}
+    report:
+      layer: cycling
+      style: default
+      problem: "bicycle=use_sidepath on cycleway is broken - should be on main road"
+
+  - id: footway-foot-default
+    when:
+      eq: {key: highway, value: footway}
+      is_true: foot
+    report:
+      - {layer: defaults, style: redundant, problem: "highway=footway with foot=yes is default"}
+      - {layer: footway, style: redundant, problem: "highway=footway with foot=yes is default"}
+
+  - id: footway-foot-no
+    when:
+      eq: {key: highway, value: footway}
+      is_false: foot
+    report:
+      - {layer: wayproblems, style: default, problem: "highway=footway with foot=no is broken"}
+      - {layer: footway, style: default, problem: "highway=footway with foot=no is broken"}
+
+  # --- highway=path -------------------------------------------------------------------------------------
+  - id: path-cycleway-tag
+    when:
+      eq: {key: highway, value: path}
+      in: {key: cycleway, values: [shared, track]}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=path with cycleway=${cycleway} tag should be on road or absent"
+
+  - id: path-cycleway-unknown-value
+    when:
+      eq: {key: highway, value: path}
+      has_key: cycleway
+      not_in: {key: cycleway, values: [shared, track]}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=path with cycleway=${cycleway} is unknown value"
+
+  - id: path-access-true
+    keys: {list: path_access_keys}
+    when:
+      eq: {key: highway, value: path}
+      is_true: "{key}"
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=path - ${key}=yes is suspicious - cant fit on single track path"
+
+  - id: path-access-false
+    keys: {list: path_access_keys}
+    when:
+      eq: {key: highway, value: path}
+      is_false: "{key}"
+    report:
+      layer: defaults
+      style: redundant
+      problem: "highway=path - ${key}=no is default"
+
+  - id: path-access-permissive
+    keys: {list: path_access_keys}
+    when:
+      - eq: {key: highway, value: path}
+      - eq: {key: "{key}", value: permissive}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=path - ${key}=permissive - cant fit on a single track path"
+
+  - id: path-access-private
+    keys: {list: path_access_keys}
+    when:
+      - eq: {key: highway, value: path}
+      - eq: {key: "{key}", value: private}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=path - ${key}=private - cant fit on a single track path"
+
+  - id: path-access-agricultural
+    keys: {list: path_access_keys}
+    when:
+      - eq: {key: highway, value: path}
+      - eq: {key: "{key}", value: agricultural}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=path - ${key}=agricultural - cant fit on a single track path"
+
+  # --- highway=cycleway ------------------------------------------------------------------------------------
+  - id: cycleway-access-default
+    keys: {list: cycleway_defno_keys}
+    when:
+      eq: {key: highway, value: cycleway}
+      is_false: "{key}"
+    report:
+      layer: cycling
+      style: redundant
+      problem: "${key}=${value} on cycleway is default"
+
+  - id: cycleway-vehicle-no
+    when:
+      - eq: {key: highway, value: cycleway}
+      - eq: {key: vehicle, value: "no"}
+    report:
+      layer: cycling
+      style: default
+      problem: "vehicle=no on cycleway is broken as bicycle is a vehicle"
+
+  - id: cycleway-bicycle-broken
+    when:
+      eq: {key: highway, value: cycleway}
+      in: {key: bicycle, list: bicycle_broken_on_cycleway}
+    report:
+      layer: cycling
+      style: default
+      problem: "bicycle=${bicycle} on cycleway is broken"
+
+  - id: cycleway-bicycle-use-sidepath
+    when:
+      - eq: {key: highway, value: cycleway}
+      - eq: {key: bicycle, value: use_sidepath}
+    report:
+      layer: cycling
+      style: default
+      problem: "cycleway=track and bicycle=use_sidepath on road is broken as there is no seperate cycleway"
+
+  # --- highway=living_street --------------------------------------------------------------------------------
+  - id: living-street-maxspeed
+    when:
+      eq: {key: highway, value: living_street}
+      has_key: maxspeed
+    report:
+      layer: wayproblems
+      style: steelline
+      problem: "maxspeed=${maxspeed} on living_street is broken - neither numeric nor walk is correct"
+
+  - id: living-street-bicycle-use-sidepath
+    when:
+      - eq: {key: highway, value: living_street}
+      - eq: {key: bicycle, value: use_sidepath}
+    report:
+      layer: cycling
+      style: default
+      problem: "bicycle=use_sidepath on living_street is broken - living_street explicitly includes bicycles"
+
+  - id: living-street-vehicle-no
+    when:
+      eq: {key: highway, value: living_street}
+      is_false: vehicle
+    report:
+      layer: wayproblems
+      style: default
+      problem: "living_street with vehicle=no is broken"
+
+  - id: living-street-vehicle-yes
+    when:
+      eq: {key: highway, value: living_street}
+      is_true: vehicle
+    report:
+      layer: defaults
+      style: redundant
+      problem: "living_street with vehicle=yes is default"
+
+  # --- highway=service ------------------------------------------------------------------------------------
+  - id: service-with-name
+    when:
+      eq: {key: highway, value: service}
+      has_key: name
+    report:
+      layer: wayproblems
+      style: default
+      problem: "highway=service with name=* is suspicious - Either public e.g. not service or name tag abuse"
+
+  - id: service-tag-on-non-service
+    when:
+      has_key: service
+      not: {eq: {key: highway, value: service}}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "service=${service} on non service highway"
+
+  # --- highway=track ---------------------------------------------------------------------------------------
+  - id: track-with-name
+    when:
+      eq: {key: highway, value: track}
+      has_key: name
+    report:
+      layer: wayproblems
+      style: brownline
+      problem: "highway=track with name is suspicious - probably not track"
+
+  - id: track-with-maxspeed
+    when:
+      eq: {key: highway, value: track}
+      has_key: maxspeed
+    report:
+      layer: wayproblems
+      style: steelline
+      problem: "highway=track with maxspeed is suspicious - probably not track"
+
+  - id: track-access-default-no
+    keys: {list: track_access_keys}
+    when:
+      eq: {key: highway, value: track}
+      is_false: "{key}"
+    report:
+      layer: wayproblems
+      style: brownline
+      problem: "highway=track - ${key}=no is suspicious - should be agricutural or empty"
