@@ -50,6 +50,9 @@ class RuleEngine {
 				std::string expand_key;
 				std::unique_ptr<Condition> condition;
 				std::vector<ReportItem> reports;
+				// Nested rules are evaluated only when this rule's condition
+				// matches; they inherit this rule's context tokens.
+				std::vector<std::unique_ptr<Rule>> rules;
 
 				~Rule(); // Condition is incomplete here, defined in yamlrules.cpp
 		};
@@ -59,9 +62,9 @@ class RuleEngine {
 		std::vector<std::unique_ptr<Rule>> m_rules;
 		std::vector<std::string> m_layers;
 		std::unique_ptr<Condition> m_gate;
-		// Values set by evaluation-time operators: _mapped, _prev, _next,
-		// _element, _source, _other_key, _other_value.
-		std::map<std::string, std::string> m_ctx;
+
+		void eval_rule(const Rule &rule, Sink &sink, const TagLookup &tags,
+				std::map<std::string, std::string> ctx) const;
 };
 
 #endif

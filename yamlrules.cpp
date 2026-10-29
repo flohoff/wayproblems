@@ -7,6 +7,7 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <stdexcept>
 
 namespace {
@@ -656,27 +657,43 @@ void add_report(const YAML::Node &item, std::vector<RuleEngine::ReportItem> &rep
 void RuleEngine::set_known_layers(const std::vector<std::string> &layers) {
 	m_layers = layers;
 
-	for (const auto &rule : m_rules)
-		for (const auto &report : rule->reports)
+	std::function<void(const Rule &)> check = [&](const Rule &rule) {
+		for (const auto &report : rule.reports)
 			if (std::find(m_layers.begin(), m_layers.end(), report.layer) == m_layers.end())
-				throw std::runtime_error("rule '" + rule->id + "' reports to unknown layer '" + report.layer + "'");
+				throw std::runtime_error("rule '" + rule.id + "' reports to unknown layer '" + report.layer + "'");
+		for (const auto &child : rule.rules)
+			check(*child);
+	};
+
+	for (const auto &rule : m_rules)
+		check(*rule);
 }
 
 void RuleEngine::evaluate(Sink &sink, const TagLookup &tags) {
-	m_ctx.clear();
+	std::map<std::string, std::string> gate_ctx;
 
-	if (m_gate && !cond_true(*m_gate, tags, m_maps, m_ctx))
+	if (m_gate && !cond_true(*m_gate, tags, m_maps, gate_ctx))
 		return;
 
-	for (const auto &rule : m_rules) {
-		m_ctx.clear();
-		if (!cond_true(*rule->condition, tags, m_maps, m_ctx))
-			continue;
-		for (const auto &report : rule->reports)
-			sink.report(report.layer, report.style,
-					substitute(report.problem, rule->expand_key, tags, m_ctx));
-	}
-	m_ctx.clear();
+	for (const auto &rule : m_rules)
+		eval_rule(*rule, sink, tags, std::map<std::string, std::string>{});
+}
+
+// Recursive rule evaluation. Nested rules run only when the parent condition
+// matched and inherit the context tokens set during its condition evaluation
+// (whoever sets a token last inside a condition wins); every child starts from
+// the parent's state, so siblings never see each other's tokens.
+void RuleEngine::eval_rule(const Rule &rule, Sink &sink, const TagLookup &tags,
+		std::map<std::string, std::string> ctx) const {
+	if (!cond_true(*rule.condition, tags, m_maps, ctx))
+		return;
+
+	for (const auto &report : rule.reports)
+		sink.report(report.layer, report.style,
+				substitute(report.problem, rule.expand_key, tags, ctx));
+
+	for (const auto &child : rule.rules)
+		eval_rule(*child, sink, tags, ctx);
 }
 
 void RuleEngine::load(const std::string &path) {
@@ -712,27 +729,76 @@ void RuleEngine::load(const std::string &path) {
 	if (!rules || !rules.IsSequence())
 		throw std::runtime_error(path + ": missing 'rules' section");
 
+	// Recursive rule parser: a rule carries "when", an optional "report"
+	// (grouping rules may leave the reporting to children) and optional
+	// nested "rules".
+	std::function<std::unique_ptr<Rule>(const YAML::Node &rule, const std::string &id, bool allow_keys)> parse_rule;
+	parse_rule = [&](const YAML::Node &rule, const std::string &id,
+			bool allow_keys) -> std::unique_ptr<Rule> {
+		auto out = std::make_unique<Rule>();
+		out->id = id;
+
+		// "keys:" expansion is done by the load loop below; nested rules with
+		// {key} templates are expanded via the parent rule's key.
+		if (rule["keys"] && !allow_keys)
+			throw std::runtime_error("nested rule cannot use 'keys' - put it on the parent rule");
+
+		out->condition = parse_when(get_field(rule, "when"), m_lists, m_maps);
+
+		if (const YAML::Node &report = rule["report"]) {
+			if (report.IsSequence()) {
+				for (const auto &item : report)
+					add_report(item, out->reports);
+			} else {
+				add_report(report, out->reports);
+			}
+		}
+
+		if (const YAML::Node &nested = rule["rules"]) {
+			unsigned int num = 0;
+			for (const auto &child : nested) {
+				++num;
+				std::string child_id = child["id"] ? child["id"].as<std::string>() : id + "#" + std::to_string(num);
+				try {
+					out->rules.push_back(parse_rule(child, child_id, false));
+				} catch (const YAML::Exception &error) {
+					throw std::runtime_error("rule '" + child_id + "': " + error.what());
+				} catch (const std::exception &error) {
+					throw std::runtime_error("rule '" + child_id + "': " + error.what());
+				}
+			}
+		}
+
+		if (out->reports.empty() && out->rules.empty())
+			throw std::runtime_error("needs a report or nested rules");
+
+		return out;
+	};
+
+	// Deep copy for "keys:" expansion; conditions and problem texts of nested
+	// rules may use "{key}" templates as well.
+	std::function<std::unique_ptr<Rule>(const Rule &src, const std::string &key, const std::string &id)> clone_rule;
+	clone_rule = [&](const Rule &src, const std::string &key, const std::string &id) {
+		auto out = std::make_unique<Rule>();
+		out->id = id;
+		out->expand_key = key;
+		out->condition = clone_condition(*src.condition, key);
+		out->reports = src.reports;
+		for (const auto &child : src.rules)
+			out->rules.push_back(clone_rule(*child, key, child->id));
+		return out;
+	};
+
 	unsigned int num = 0;
 	for (const auto &rule : rules) {
 		++num;
 
-		auto sink_rule = std::make_unique<Rule>();
 		std::string id;
 
 		try {
 			// May throw before id is known - use the index.
 			id = rule["id"] ? rule["id"].as<std::string>() : "rule#" + std::to_string(num);
-			sink_rule->id = id;
-			sink_rule->condition = parse_when(get_field(rule, "when"), m_lists, m_maps);
-
-			std::vector<ReportItem> reports;
-			const YAML::Node &report = get_field(rule, "report");
-			if (report.IsSequence()) {
-				for (const auto &item : report)
-					add_report(item, reports);
-			} else {
-				add_report(report, reports);
-			}
+			auto parsed = parse_rule(rule, id, true);
 
 			if (const YAML::Node &keys = rule["keys"]) {
 				std::vector<std::string> keynames;
@@ -751,17 +817,10 @@ void RuleEngine::load(const std::string &path) {
 						keynames.push_back(key.as<std::string>());
 				}
 
-				for (const auto &keyname : keynames) {
-					auto expanded = std::make_unique<Rule>();
-					expanded->id = id + ":" + keyname;
-					expanded->expand_key = keyname;
-					expanded->condition = clone_condition(*sink_rule->condition, keyname);
-					expanded->reports = reports;
-					m_rules.push_back(std::move(expanded));
-				}
+				for (const auto &keyname : keynames)
+					m_rules.push_back(clone_rule(*parsed, keyname, id + ":" + keyname));
 			} else {
-				sink_rule->reports = std::move(reports);
-				m_rules.push_back(std::move(sink_rule));
+				m_rules.push_back(std::move(parsed));
 			}
 		} catch (const YAML::Exception &error) {
 			throw std::runtime_error(path + ": rule '" + id + "': " + error.what());
