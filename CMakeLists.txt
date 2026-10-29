@@ -38,7 +38,8 @@ find_path(JSON_INCLUDE_DIR
 	PATHS
 	/usr/include/
 	/usr/include/
-	${CMAKE_SOURCE_DIR}/json/include
+	${CMAKE_SOURCE_DIR}/nlohmann-json/include
+	${CMAKE_SOURCE_DIR}/../nlohmann-json/include
 	${CMAKE_SYSROOT}/usr/local/include
 	)
 message("nlohmann directory ${JSON_INCLUDE_DIR}")
