@@ -50,6 +50,10 @@ enum layerid {
 
 // All writers write the same 8 layers.
 class ProblemWriter {
+	protected:
+		bool verbose;
+		ProblemWriter(bool is_verbose) : verbose(is_verbose) { }
+
 	public:
 		virtual void writeWay(const std::string &layer, const osmium::Way& way, const char *style,
 				const std::string &problem) = 0;
@@ -67,7 +71,8 @@ class SpatiaLiteWriter : public ProblemWriter {
 
 	public:
 
-	explicit SpatiaLiteWriter(const std::string &outfile) :
+	explicit SpatiaLiteWriter(const std::string &outfile, bool is_verbose=false) :
+			ProblemWriter(is_verbose),
 			dataset("sqlite", outfile, gdalcpp::SRS{}, {  "SPATIALITE=TRUE", "INIT_WITH_EPSG=no" }) {
 
 			dataset.exec("PRAGMA synchronous = OFF");
@@ -132,13 +137,15 @@ class SpatiaLiteWriter : public ProblemWriter {
 
 			feature.add_to_layer();
 
-			std::cout << "way=" << way.id() << " problem=\"" << problem << "\" || "
-				<< " changeset=" << way.changeset()
-				<< " user=\"" << way.user() << "\""
-				<< " timestamp=" << way.timestamp().to_iso()
-				<< " layer=" << this->layername[lid]
-				<< " version=" << way.version()
-				<< std::endl;
+			if (verbose) {
+				std::cout << "way=" << way.id() << " problem=\"" << problem << "\" || "
+					<< " changeset=" << way.changeset()
+					<< " user=\"" << way.user() << "\""
+					<< " timestamp=" << way.timestamp().to_iso()
+					<< " layer=" << this->layername[lid]
+					<< " version=" << way.version()
+					<< std::endl;
+			}
 
 		} catch (const gdalcpp::gdal_error& e) {
 			std::cerr << "gdal_error while creating feature wayid " << way.id()<< std::endl;
@@ -158,7 +165,8 @@ class GeoJSONWriter : public ProblemWriter {
 	std::unique_ptr<std::string>	pending;
 
 	public:
-		explicit GeoJSONWriter(const std::string &outfile) :
+		explicit GeoJSONWriter(const std::string &outfile, bool is_verbose=false) :
+				ProblemWriter(is_verbose),
 				out(outfile, std::ios::out | std::ios::trunc) {
 			if (!out.is_open())
 				throw std::runtime_error("cannot open output file '" + outfile + "'");
@@ -214,13 +222,15 @@ class GeoJSONWriter : public ProblemWriter {
 					pending=std::make_unique<std::string>();
 				*pending=std::move(dumped);
 
-				std::cout << "way=" << way.id() << " problem=\"" << problem << "\" || "
-					<< " changeset=" << way.changeset()
-					<< " user=\"" << way.user() << "\""
-					<< " timestamp=" << way.timestamp().to_iso()
-					<< " layer=" << layer
-					<< " version=" << way.version()
-					<< std::endl;
+				if (verbose) {
+					std::cout << "way=" << way.id() << " problem=\"" << problem << "\" || "
+						<< " changeset=" << way.changeset()
+						<< " user=\"" << way.user() << "\""
+						<< " timestamp=" << way.timestamp().to_iso()
+						<< " layer=" << layer
+						<< " version=" << way.version()
+						<< std::endl;
+				}
 
 			} catch (const osmium::invalid_location& e) {
 				std::cerr << "invalid location wayid " << way.id() << std::endl;
@@ -288,6 +298,7 @@ int main(int argc, char* argv[]) {
 		("outfile,o", po::value<std::string>()->required(),
 			"Output file (newline-delimited GeoJSON for .json/.geojson, SpatiaLite database otherwise)")
 		("rules,r", po::value<std::string>()->default_value("rules.yaml"), "YAML ruleset file")
+		("verbose,v", "log every report to stdout")
         ;
         po::variables_map vm;
 	try {
@@ -334,9 +345,9 @@ int main(int argc, char* argv[]) {
 
 	std::unique_ptr<ProblemWriter>	writer;
 	if (geojson) {
-		writer=std::make_unique<GeoJSONWriter>(outfile);
+		writer=std::make_unique<GeoJSONWriter>(outfile, vm.count("verbose"));
 	} else {
-		writer=std::make_unique<SpatiaLiteWriter>(outfile);
+		writer=std::make_unique<SpatiaLiteWriter>(outfile, vm.count("verbose"));
 	}
 
 	try {
