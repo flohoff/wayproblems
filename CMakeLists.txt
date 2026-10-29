@@ -33,11 +33,13 @@ else()
 	include_directories(${YAML_CPP_INCLUDE_DIRS})
 endif()
 
+find_package(nlohmann_json 3.9 REQUIRED)
+
 add_executable(wayproblems wayproblems.cpp yamlrules.cpp)
 add_executable(accesscombinations accesscombinations.cpp)
 include_directories(${OSMIUM_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(SYSTEM ${PROTOZERO_INCLUDE_DIR})
-target_link_libraries(wayproblems ${OSMIUM_LIBRARIES} ${Boost_LIBRARIES} ${YAML_CPP_LIB})
+target_link_libraries(wayproblems ${OSMIUM_LIBRARIES} ${Boost_LIBRARIES} ${YAML_CPP_LIB} nlohmann_json::nlohmann_json)
 target_link_libraries(accesscombinations ${OSMIUM_LIBRARIES} ${Boost_LIBRARIES})
 
