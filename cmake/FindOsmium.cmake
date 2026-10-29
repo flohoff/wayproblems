@@ -32,8 +32,7 @@
 #      io         - include libraries needed for any type of input/output
 #      geos       - include if you want to use any of the GEOS functions
 #      gdal       - include if you want to use any of the OGR functions
-#      proj       - include if you want to use any of the Proj.4 functions
-#      sparsehash - include if you use the sparsehash index
+#      lz4        - include support for LZ4 compression of PBF files
 #
 #    You can check for success with something like this:
 #
@@ -56,10 +55,8 @@
 
 # This is the list of directories where we look for osmium includes.
 set(_osmium_include_path
-	libosmium
-        ../libosmium
-        ~/Library/Frameworks
-        /Library/Frameworks
+        ${CMAKE_SOURCE_DIR}/libosmium
+        ${CMAKE_SOURCE_DIR}/../libosmium
         /opt/local # DarwinPorts
         /opt
 )
@@ -72,6 +69,9 @@ find_path(OSMIUM_INCLUDE_DIR osmium/version.hpp
 
 # Check libosmium version number
 if(Osmium_FIND_VERSION)
+    if(NOT EXISTS "${OSMIUM_INCLUDE_DIR}/osmium/version.hpp")
+        message(FATAL_ERROR "Missing ${OSMIUM_INCLUDE_DIR}/osmium/version.hpp. Either your libosmium version is too old, or libosmium wasn't found in the place you said.")
+    endif()
     file(STRINGS "${OSMIUM_INCLUDE_DIR}/osmium/version.hpp" _libosmium_version_define REGEX "#define LIBOSMIUM_VERSION_STRING")
     if("${_libosmium_version_define}" MATCHES "#define LIBOSMIUM_VERSION_STRING \"([0-9.]+)\"")
         set(_libosmium_version "${CMAKE_MATCH_1}")
@@ -112,16 +112,23 @@ endif()
 if(Osmium_USE_PBF)
     find_package(ZLIB)
     find_package(Threads)
-    find_package(Protozero 1.5.1)
+    find_package(Protozero 1.6.3)
+
+    if(Osmium_USE_LZ4)
+        find_package(LZ4 REQUIRED)
+        add_definitions(-DOSMIUM_WITH_LZ4)
+    endif()
 
     list(APPEND OSMIUM_EXTRA_FIND_VARS ZLIB_FOUND Threads_FOUND PROTOZERO_INCLUDE_DIR)
     if(ZLIB_FOUND AND Threads_FOUND AND PROTOZERO_FOUND)
         list(APPEND OSMIUM_PBF_LIBRARIES
             ${ZLIB_LIBRARIES}
+            ${LZ4_LIBRARIES}
             ${CMAKE_THREAD_LIBS_INIT}
         )
         list(APPEND OSMIUM_INCLUDE_DIRS
             ${ZLIB_INCLUDE_DIR}
+            ${LZ4_INCLUDE_DIRS}
             ${PROTOZERO_INCLUDE_DIR}
         )
     else()
@@ -192,56 +199,6 @@ if(Osmium_USE_GDAL)
         list(APPEND OSMIUM_INCLUDE_DIRS ${GDAL_INCLUDE_DIRS})
     else()
         message(WARNING "Osmium: GDAL library is required but not found, please install it or configure the paths.")
-    endif()
-endif()
-
-#----------------------------------------------------------------------
-# Component 'proj'
-if(Osmium_USE_PROJ)
-    find_path(PROJ_INCLUDE_DIR proj_api.h)
-    find_library(PROJ_LIBRARY NAMES proj)
-
-    list(APPEND OSMIUM_EXTRA_FIND_VARS PROJ_INCLUDE_DIR PROJ_LIBRARY)
-    if(PROJ_INCLUDE_DIR AND PROJ_LIBRARY)
-        set(PROJ_FOUND 1)
-        list(APPEND OSMIUM_LIBRARIES ${PROJ_LIBRARY})
-        list(APPEND OSMIUM_INCLUDE_DIRS ${PROJ_INCLUDE_DIR})
-    else()
-        message(WARNING "Osmium: PROJ.4 library is required but not found, please install it or configure the paths.")
-    endif()
-endif()
-
-#----------------------------------------------------------------------
-# Component 'sparsehash'
-if(Osmium_USE_SPARSEHASH)
-    find_path(SPARSEHASH_INCLUDE_DIR google/sparsetable)
-
-    list(APPEND OSMIUM_EXTRA_FIND_VARS SPARSEHASH_INCLUDE_DIR)
-    if(SPARSEHASH_INCLUDE_DIR)
-        # Find size of sparsetable::size_type. This does not work on older
-        # CMake versions because they can do this check only in C, not in C++.
-        if(NOT CMAKE_VERSION VERSION_LESS 3.0)
-           include(CheckTypeSize)
-           set(CMAKE_REQUIRED_INCLUDES ${SPARSEHASH_INCLUDE_DIR})
-           set(CMAKE_EXTRA_INCLUDE_FILES "google/sparsetable")
-           check_type_size("google::sparsetable<int>::size_type" SPARSETABLE_SIZE_TYPE LANGUAGE CXX)
-           set(CMAKE_EXTRA_INCLUDE_FILES)
-           set(CMAKE_REQUIRED_INCLUDES)
-        else()
-           set(SPARSETABLE_SIZE_TYPE ${CMAKE_SIZEOF_VOID_P})
-        endif()
-
-        # Sparsetable::size_type must be at least 8 bytes (64bit), otherwise
-        # OSM object IDs will not fit.
-        if(SPARSETABLE_SIZE_TYPE GREATER 7)
-            set(SPARSEHASH_FOUND 1)
-            add_definitions(-DOSMIUM_WITH_SPARSEHASH=${SPARSEHASH_FOUND})
-            list(APPEND OSMIUM_INCLUDE_DIRS ${SPARSEHASH_INCLUDE_DIR})
-        else()
-            message(WARNING "Osmium: Disabled Google SparseHash library on 32bit system (size_type=${SPARSETABLE_SIZE_TYPE}).")
-        endif()
-    else()
-        message(WARNING "Osmium: Google SparseHash library is required but not found, please install it or configure the paths.")
     endif()
 endif()
 
@@ -325,7 +282,7 @@ if(MSVC)
     add_definitions(-DNOMINMAX -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-if(APPLE)
+if(APPLE AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 # following only available from cmake 2.8.12:
 #   add_compile_options(-stdlib=libc++)
 # so using this instead:
