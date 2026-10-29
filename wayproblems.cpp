@@ -51,8 +51,8 @@ enum layerid {
 // All writers write the same 8 layers.
 class ProblemWriter {
 	protected:
-		bool verbose;
-		ProblemWriter(bool is_verbose) : verbose(is_verbose) { }
+		int verbosity;
+		ProblemWriter(int verbosity) : verbosity(verbosity) { }
 
 	public:
 		virtual void writeWay(const std::string &layer, const osmium::Way& way, const char *style,
@@ -137,7 +137,7 @@ class SpatiaLiteWriter : public ProblemWriter {
 
 			feature.add_to_layer();
 
-			if (verbose) {
+			if (verbosity>=2) {
 				std::cout << "way=" << way.id() << " problem=\"" << problem << "\" || "
 					<< " changeset=" << way.changeset()
 					<< " user=\"" << way.user() << "\""
@@ -165,8 +165,8 @@ class GeoJSONWriter : public ProblemWriter {
 	std::unique_ptr<std::string>	pending;
 
 	public:
-		explicit GeoJSONWriter(const std::string &outfile, bool is_verbose=false) :
-				ProblemWriter(is_verbose),
+		explicit GeoJSONWriter(const std::string &outfile, int verbosity=0) :
+				ProblemWriter(verbosity),
 				out(outfile, std::ios::out | std::ios::trunc) {
 			if (!out.is_open())
 				throw std::runtime_error("cannot open output file '" + outfile + "'");
@@ -222,7 +222,7 @@ class GeoJSONWriter : public ProblemWriter {
 					pending=std::make_unique<std::string>();
 				*pending=std::move(dumped);
 
-				if (verbose) {
+				if (verbosity>=2) {
 					std::cout << "way=" << way.id() << " problem=\"" << problem << "\" || "
 						<< " changeset=" << way.changeset()
 						<< " user=\"" << way.user() << "\""
@@ -298,7 +298,8 @@ int main(int argc, char* argv[]) {
 		("outfile,o", po::value<std::string>()->required(),
 			"Output file (newline-delimited GeoJSON for .json/.geojson, SpatiaLite database otherwise)")
 		("rules,r", po::value<std::string>()->default_value("rules.yaml"), "YAML ruleset file")
-		("verbose,v", "log every report to stdout")
+		("verbose,v", po::value<int>()->implicit_value(1),
+			"dump rule hit/miss statistics (-vv also logs every report to stdout)")
         ;
         po::variables_map vm;
 	try {
@@ -345,9 +346,9 @@ int main(int argc, char* argv[]) {
 
 	std::unique_ptr<ProblemWriter>	writer;
 	if (geojson) {
-		writer=std::make_unique<GeoJSONWriter>(outfile, vm.count("verbose"));
+		writer=std::make_unique<GeoJSONWriter>(outfile, vm["verbose"].as<int>());
 	} else {
-		writer=std::make_unique<SpatiaLiteWriter>(outfile, vm.count("verbose"));
+		writer=std::make_unique<SpatiaLiteWriter>(outfile, vm["verbose"].as<int>());
 	}
 
 	try {
@@ -363,6 +364,6 @@ int main(int argc, char* argv[]) {
 	osmium::apply(reader, location_handler, handler);
 	reader.close();
 
-	if (vm.count("verbose"))
+	if (vm["verbose"].as<int>() > 0)
 		rules.dump_stats(std::cout);
 }
