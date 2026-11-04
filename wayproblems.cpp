@@ -71,8 +71,8 @@ class SpatiaLiteWriter : public ProblemWriter {
 
 	public:
 
-	explicit SpatiaLiteWriter(const std::string &outfile, bool is_verbose=false) :
-			ProblemWriter(is_verbose),
+	explicit SpatiaLiteWriter(const std::string &outfile, int verbosity=0) :
+			ProblemWriter(verbosity),
 			dataset("sqlite", outfile, gdalcpp::SRS{}, {  "SPATIALITE=TRUE", "INIT_WITH_EPSG=no" }) {
 
 			dataset.exec("PRAGMA synchronous = OFF");
@@ -305,7 +305,7 @@ int main(int argc, char* argv[]) {
 			"Output file (newline-delimited GeoJSON for .json/.geojson, SpatiaLite database otherwise)")
 		("rules,r", po::value<std::string>()->default_value("rules.yaml"), "YAML ruleset file")
 		("verbose,v", po::value<int>()->default_value(0)->implicit_value(1),
-			"dump rule hit/miss statistics (-vv also logs every report to stdout)")
+			"dump rule hit/miss statistics (-v 2 also logs every report to stdout)")
         ;
         po::variables_map vm;
 	try {
@@ -319,6 +319,8 @@ int main(int argc, char* argv[]) {
 		std::cerr << "Error: " << e.what() << "\n";
 		exit(-1);
 	}
+
+	const int verbosity=vm["verbose"].as<int>();
 
 	RuleEngine	rules;
 
@@ -356,9 +358,9 @@ int main(int argc, char* argv[]) {
 
 	std::unique_ptr<ProblemWriter>	writer;
 	if (geojson) {
-		writer=std::make_unique<GeoJSONWriter>(outfile, vm["verbose"].as<int>());
+		writer=std::make_unique<GeoJSONWriter>(outfile, verbosity);
 	} else {
-		writer=std::make_unique<SpatiaLiteWriter>(outfile, vm["verbose"].as<int>());
+		writer=std::make_unique<SpatiaLiteWriter>(outfile, verbosity);
 	}
 
 	try {
@@ -374,6 +376,6 @@ int main(int argc, char* argv[]) {
 	osmium::apply(reader, location_handler, handler);
 	reader.close();
 
-	if (vm["verbose"].as<int>() > 0)
+	if (verbosity > 0)
 		rules.dump_stats(std::cout);
 }
