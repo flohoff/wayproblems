@@ -55,6 +55,7 @@ INSERT INTO "meta" VALUES('layer.wayproblems.columns:4','user');
 INSERT INTO "meta" VALUES('layer.wayproblems.columns:5','timestamp');
 INSERT INTO "meta" VALUES('layer.wayproblems.columns:6','problem');
 INSERT INTO "meta" VALUES('layer.wayproblems.columns:7','style');
+INSERT INTO "meta" VALUES('layer.wayproblems.columns:8','rule');
 INSERT INTO "meta" VALUES('layer.wayproblems.popup', ( readfile('wayproblems-meta.popup' )) );
 
 
@@ -70,6 +71,7 @@ INSERT INTO "meta" VALUES('layer.ref.columns:4','user');
 INSERT INTO "meta" VALUES('layer.ref.columns:5','timestamp');
 INSERT INTO "meta" VALUES('layer.ref.columns:6','problem');
 INSERT INTO "meta" VALUES('layer.ref.columns:7','style');
+INSERT INTO "meta" VALUES('layer.ref.columns:8','rule');
 INSERT INTO "meta" VALUES('layer.ref.popup', ( readfile('wayproblems-meta.popup' )) );
 
 
@@ -86,6 +88,7 @@ INSERT INTO "meta" VALUES('layer.footway.columns:4','user');
 INSERT INTO "meta" VALUES('layer.footway.columns:5','timestamp');
 INSERT INTO "meta" VALUES('layer.footway.columns:6','problem');
 INSERT INTO "meta" VALUES('layer.footway.columns:7','style');
+INSERT INTO "meta" VALUES('layer.footway.columns:8','rule');
 INSERT INTO "meta" VALUES('layer.footway.popup', ( readfile('wayproblems-meta.popup' )) );
 
 
@@ -100,6 +103,7 @@ INSERT INTO "meta" VALUES('layer.strange.columns:4','user');
 INSERT INTO "meta" VALUES('layer.strange.columns:5','timestamp');
 INSERT INTO "meta" VALUES('layer.strange.columns:6','problem');
 INSERT INTO "meta" VALUES('layer.strange.columns:7','style');
+INSERT INTO "meta" VALUES('layer.strange.columns:8','rule');
 INSERT INTO "meta" VALUES('layer.strange.popup', ( readfile('wayproblems-meta.popup' )) );
 
 INSERT INTO "meta" VALUES('layer.maxspeed.geometrycolumn','geometry');
@@ -113,6 +117,7 @@ INSERT INTO "meta" VALUES('layer.maxspeed.columns:4','user');
 INSERT INTO "meta" VALUES('layer.maxspeed.columns:5','timestamp');
 INSERT INTO "meta" VALUES('layer.maxspeed.columns:6','problem');
 INSERT INTO "meta" VALUES('layer.maxspeed.columns:7','style');
+INSERT INTO "meta" VALUES('layer.maxspeed.columns:8','rule');
 INSERT INTO "meta" VALUES('layer.maxspeed.popup', ( readfile('wayproblems-meta.popup' )) );
 
 INSERT INTO "meta" VALUES('layer.zonetraffic.geometrycolumn','geometry');
@@ -126,6 +131,7 @@ INSERT INTO "meta" VALUES('layer.zonetraffic.columns:4','user');
 INSERT INTO "meta" VALUES('layer.zonetraffic.columns:5','timestamp');
 INSERT INTO "meta" VALUES('layer.zonetraffic.columns:6','problem');
 INSERT INTO "meta" VALUES('layer.zonetraffic.columns:7','style');
+INSERT INTO "meta" VALUES('layer.zonetraffic.columns:8','rule');
 INSERT INTO "meta" VALUES('layer.zonetraffic.popup', ( readfile('wayproblems-meta.popup' )) );
 
 INSERT INTO "meta" VALUES('layer.defaults.geometrycolumn','geometry');
@@ -139,8 +145,7 @@ INSERT INTO "meta" VALUES('layer.defaults.columns:4','user');
 INSERT INTO "meta" VALUES('layer.defaults.columns:5','timestamp');
 INSERT INTO "meta" VALUES('layer.defaults.columns:6','problem');
 INSERT INTO "meta" VALUES('layer.defaults.columns:7','style');
+INSERT INTO "meta" VALUES('layer.defaults.columns:8','rule');
 INSERT INTO "meta" VALUES('layer.defaults.popup', ( readfile('wayproblems-meta.popup' )) );
-
-
 
 COMMIT;

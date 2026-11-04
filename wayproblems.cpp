@@ -56,7 +56,7 @@ class ProblemWriter {
 
 	public:
 		virtual void writeWay(const std::string &layer, const osmium::Way& way, const char *style,
-				const std::string &problem) = 0;
+				const std::string &problem, const std::string &rule_id) = 0;
 		virtual std::vector<std::string> layer_names() const = 0;
 		virtual ~ProblemWriter() = default;
 };
@@ -99,6 +99,7 @@ class SpatiaLiteWriter : public ProblemWriter {
 		l->add_field("problem", OFTString, 60);
 		l->add_field("version", OFTString, 60);
 		l->add_field("style", OFTString, 20);
+		l->add_field("rule", OFTString, 60);
 
 		layername[id]=name;
 		layer[id]=l;
@@ -120,7 +121,7 @@ class SpatiaLiteWriter : public ProblemWriter {
 	}
 
 	void writeWay(const std::string &layer, const osmium::Way& way, const char *style,
-			const std::string &problem) override {
+			const std::string &problem, const std::string &rule_id) override {
 		layerid lid=layer_id(layer);
 		try  {
 			std::unique_ptr<OGRLineString>	linestring = m_factory.create_linestring(way);
@@ -134,11 +135,13 @@ class SpatiaLiteWriter : public ProblemWriter {
 			feature.set_field("problem", problem.c_str());
 			feature.set_field("style", style);
 			feature.set_field("version", static_cast<double>(way.version()));
+			feature.set_field("rule", rule_id.c_str());
 
 			feature.add_to_layer();
 
 			if (verbosity>=2) {
-				std::cout << "way=" << way.id() << " problem=\"" << problem << "\" || "
+				std::cout << "way=" << way.id() << " problem=\"" << problem << "\""
+					<< " rule=\"" << rule_id << "\" || "
 					<< " changeset=" << way.changeset()
 					<< " user=\"" << way.user() << "\""
 					<< " timestamp=" << way.timestamp().to_iso()
@@ -186,7 +189,7 @@ class GeoJSONWriter : public ProblemWriter {
 		}
 
 		void writeWay(const std::string &layer, const osmium::Way& way, const char *style,
-				const std::string &problem) override {
+				const std::string &problem, const std::string &rule_id) override {
 			try {
 				nlohmann::json coordinates;
 				for (const auto &node_ref : way.nodes()) {
@@ -209,7 +212,8 @@ class GeoJSONWriter : public ProblemWriter {
 						{ "timestamp", way.timestamp().to_iso() },
 						{ "problem", problem },
 						{ "version", static_cast<uint32_t>(way.version()) },
-						{ "style", style }
+						{ "style", style },
+						{ "rule", rule_id }
 					}}
 				};
 
@@ -223,7 +227,8 @@ class GeoJSONWriter : public ProblemWriter {
 				*pending=std::move(dumped);
 
 				if (verbosity>=2) {
-					std::cout << "way=" << way.id() << " problem=\"" << problem << "\" || "
+					std::cout << "way=" << way.id() << " problem=\"" << problem << "\""
+						<< " rule=\"" << rule_id << "\" || "
 						<< " changeset=" << way.changeset()
 						<< " user=\"" << way.user() << "\""
 						<< " timestamp=" << way.timestamp().to_iso()
@@ -271,8 +276,9 @@ class WayHandler : public osmium::handler::Handler, public RuleEngine::Sink {
 	public:
 		WayHandler(ProblemWriter &writer, RuleEngine *rules) : writer(writer), rules(rules), current_way(nullptr) {};
 
-		void report(const std::string &layer, const std::string &style, const std::string &problem) override {
-			writer.writeWay(layer, *current_way, style.c_str(), problem);
+		void report(const std::string &layer, const std::string &style, const std::string &problem,
+				const std::string &rule_id) override {
+			writer.writeWay(layer, *current_way, style.c_str(), problem, rule_id);
 		}
 
 		void way(osmium::Way& way) {

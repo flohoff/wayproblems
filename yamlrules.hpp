@@ -21,7 +21,8 @@ class TagLookup {
 class RuleEngine {
 	public:
 		struct Sink {
-				virtual void report(const std::string &layer, const std::string &style, const std::string &problem) = 0;
+				virtual void report(const std::string &layer, const std::string &style, const std::string &problem,
+					const std::string &rule_id) = 0;
 				virtual ~Sink() = default;
 		};
 

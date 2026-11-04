@@ -703,7 +703,7 @@ void RuleEngine::eval_rule(Rule &rule, Sink &sink, const TagLookup &tags,
 
 	for (const auto &report : rule.reports)
 		sink.report(report.layer, report.style,
-				substitute(report.problem, rule.expand_key, tags, ctx));
+				substitute(report.problem, rule.expand_key, tags, ctx), rule.id);
 
 	for (const auto &child : rule.rules)
 		eval_rule(*child, sink, tags, ctx);
