@@ -298,12 +298,16 @@ int main(int argc, char* argv[]) {
 		("outfile,o", po::value<std::string>()->required(),
 			"Output file (newline-delimited GeoJSON for .json/.geojson, SpatiaLite database otherwise)")
 		("rules,r", po::value<std::string>()->default_value("rules.yaml"), "YAML ruleset file")
-		("verbose,v", po::value<int>()->implicit_value(1),
+		("verbose,v", po::value<int>()->default_value(0)->implicit_value(1),
 			"dump rule hit/miss statistics (-vv also logs every report to stdout)")
         ;
         po::variables_map vm;
 	try {
 		po::store(po::parse_command_line(argc, argv, desc), vm);
+		if (vm.count("help")) {
+			std::cout << "Usage: " << argv[0] << " [options]\n" << desc << "\n";
+			exit(0);
+		}
 		po::notify(vm);
 	} catch(boost::program_options::required_option& e) {
 		std::cerr << "Error: " << e.what() << "\n";
