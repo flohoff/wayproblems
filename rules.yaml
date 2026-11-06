@@ -301,7 +301,7 @@ rules:
       - id: lit-on-track
         when:
           - in: {key: lit, list: lit_on}
-          - in: {key: highway, values: [track]}
+          - in: {key: highway, values: [track, bridleway]}
         report:
           layer: strange
           style: default
