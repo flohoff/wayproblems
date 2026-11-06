@@ -1,5 +1,9 @@
 ---
 
+stages:
+  - build
+  - build-secondary
+
 variables:
   LIBOSMIUM_STABLE_VERSION: v2.23.1
   NLOHMANN_STABLE_VERSION: v3.11.3
@@ -10,7 +14,7 @@ variables:
 
 build:trixie:git:stable:
   image: amd64/debian:trixie
-  stage: build
+  stage: build-secondary
   variables:
     GIT_BASE: https://gitlab-ci-token:${CI_JOB_TOKEN}@gl.zz.de
   script:
@@ -33,17 +37,36 @@ build:trixie:packages:
     - mkdir build
     - ( cd build ; cmake .. )
     - make -C build
+  artifacts:
+    paths:
+      - build
+      - rules
+
+test:trixie:package:
+  image: amd64/debian:trixie
+  stage: build
+  needs:
+    - build
+  script:
+    - apt-get update
+    - apt-get install s3cmd
+    - apt-get -fy install --no-install-recommends --no-install-suggests libboost-program-options1.83.0 libgdal36 sqlite3 libyaml-cpp0.8 s3cmd
+    - cp ${S3_CFG} ~/.s3cfg
+    - s3cmd get s3://osm/pbf/kreisgt.pbf
+    - build/wayproblems -i kreisgt.pbf -o kreisgt.sqlite -r rules/rules-de.yaml -r rules/rules.yaml
 
 trigger:osmprocess:wayproblems:
   needs:
     - job: build:trixie:packages
+      artifacts: false
+    - job: test:trixie:package
       artifacts: false
   trigger:
     project: osm/process/wayproblems
 
 build:trixie:git:latest:
   image: amd64/debian:trixie
-  stage: build
+  stage: build-secondary
   variables:
     GIT_BASE: https://gitlab-ci-token:${CI_JOB_TOKEN}@gl.zz.de
   script:
@@ -59,7 +82,7 @@ build:trixie:git:latest:
 
 build:sid:packages:
   image: amd64/debian:sid
-  stage: build
+  stage: build-secondary
   script:
     - apt-get update
     - apt-get install --no-install-suggests --no-install-recommends -fuy ${DEBIAN_PKG_ESSENTIAL} ${DEBIAN_PKG_GIT}
@@ -69,7 +92,7 @@ build:sid:packages:
 
 build:sid:git:latest:
   image: amd64/debian:sid
-  stage: build
+  stage: build-secondary
   variables:
     GIT_BASE: https://gitlab-ci-token:${CI_JOB_TOKEN}@gl.zz.de
   script:
