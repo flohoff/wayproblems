@@ -12,3 +12,19 @@ maps:
     "AT:city_limit40": 40
     "AT:trunk": 100
     "AT:motorway": 130
+lists:
+  maxspeed_source_known:
+    - "AT:urban"
+    - "AT:bicycle_road"
+    - "AT:zone10"
+    - "AT:zone20"
+    - "AT:zone30"
+    - "AT:shared_zone20"
+    - "AT:shared_zone30"
+    - "AT:city_limit30"
+    - "AT:city_limit40"
+    - "AT:city_limit40"
+    - "AT:trunk"
+    - "AT:motorway"
+    - "sign"
+    - "signals"

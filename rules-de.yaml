@@ -10,3 +10,19 @@ maps:
     "DE:bicycle_road": "30"
     "DE:urban": "50"
     "DE:rural": "100"
+
+lists:
+  maxspeed_source_known:
+    - sign
+    - signals
+    - DE:motorway
+    - DE:urban
+    - DE:rural
+    - DE:zone
+    - DE:bicycle_road
+    - "DE:zone30"
+    - "DE:zone:30"
+    - "DE:zone20"
+    - "DE:zone:20"
+    - "DE:zone10"
+    - "DE:zone:10"

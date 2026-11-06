@@ -97,9 +97,6 @@ lists:
   highway_should_have_maxspeed: [primary, primary_link, secondary, secondary_link,
                                  tertiary, tertiary_link]
   circular_highway: [tertiary, secondary, primary, unclassified, residential]
-  maxspeed_source_known: [sign, signals, DE:motorway, DE:urban, DE:rural, DE:zone,
-                          DE:bicycle_road, "DE:zone30", "DE:zone:30", "DE:zone20",
-                          "DE:zone:20", "DE:zone10", "DE:zone:10"]
   construction_known: ["yes", "no", widening, minor, motorway, motorway_link, trunk,
                        trunk_link, primary, primary_link, secondary, secondary_link,
                        tertiary, tertiary_link, unclassified, residential,
