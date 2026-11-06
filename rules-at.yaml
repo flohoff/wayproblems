@@ -1,0 +1,14 @@
+---
+maps:
+  maxspeed_types:
+    "AT:urban": 50
+    "AT:bicycle_road": 30
+    "AT:zone10": 10
+    "AT:zone20": 20
+    "AT:zone30": 30
+    "AT:shared_zone20": 20
+    "AT:shared_zone30": 30
+    "AT:city_limit30": 30
+    "AT:city_limit40": 40
+    "AT:trunk": 100
+    "AT:motorway": 130

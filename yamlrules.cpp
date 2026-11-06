@@ -778,8 +778,10 @@ void RuleEngine::load(const std::string &path) {
 		m_gate = parse_when(gate, m_lists, m_maps);
 
 	const YAML::Node &rules = doc["rules"];
-	if (!rules || !rules.IsSequence())
-		throw std::runtime_error(path + ": missing 'rules' section");
+	if (!rules)
+		return; // lists/maps/gate-only file
+	if (!rules.IsSequence())
+		throw std::runtime_error(path + ": 'rules' must be a sequence");
 
 	// Recursive rule parser: a rule carries "when", an optional "report"
 	// (grouping rules may leave the reporting to children) and optional

@@ -1,0 +1,12 @@
+---
+maps:
+  maxspeed_types:
+    "DE:zone30": "30"
+    "DE:zone:30": "30"
+    "DE:zone20": "20"
+    "DE:zone:20": "20"
+    "DE:zone10": "10"
+    "DE:zone:10": "10"
+    "DE:bicycle_road": "30"
+    "DE:urban": "50"
+    "DE:rural": "100"

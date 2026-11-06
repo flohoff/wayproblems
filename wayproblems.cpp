@@ -303,7 +303,8 @@ int main(int argc, char* argv[]) {
                 ("infile,i", po::value<std::string>()->required(), "Input file")
 		("outfile,o", po::value<std::string>()->required(),
 			"Output file (newline-delimited GeoJSON for .json/.geojson, SpatiaLite database otherwise)")
-		("rules,r", po::value<std::string>()->default_value("rules.yaml"), "YAML ruleset file")
+		("rules,r", po::value<std::vector<std::string>>()->default_value(std::vector<std::string>{"rules.yaml"}, "rules.yaml")->composing(),
+			"YAML ruleset file (repeatable)")
 		("verbose,v", po::value<int>()->default_value(0)->implicit_value(1),
 			"dump rule hit/miss statistics (-v 2 also logs every report to stdout)")
         ;
@@ -324,10 +325,17 @@ int main(int argc, char* argv[]) {
 
 	RuleEngine	rules;
 
-	try {
-		rules.load(vm["rules"].as<std::string>());
-	} catch(const std::exception& e) {
-		std::cerr << "Error in ruleset " << vm["rules"].as<std::string>() << ": " << e.what() << "\n";
+	const auto &rulefiles = vm["rules"].as<std::vector<std::string>>();
+	for (const auto &rulefile : rulefiles) {
+		try {
+			rules.load(rulefile);
+		} catch(const std::exception& e) {
+			std::cerr << "Error in ruleset " << rulefile << ": " << e.what() << "\n";
+			exit(-1);
+		}
+	}
+	if (!rules.size()) {
+		std::cerr << "Error: no rules defined in any ruleset\n";
 		exit(-1);
 	}
 
@@ -366,7 +374,7 @@ int main(int argc, char* argv[]) {
 	try {
 		rules.set_known_layers(writer->layer_names());
 	} catch(const std::exception& e) {
-		std::cerr << "Error in ruleset " << vm["rules"].as<std::string>() << ": " << e.what() << "\n";
+		std::cerr << "Error in ruleset: " << e.what() << "\n";
 		exit(-1);
 	}
 
