@@ -159,18 +159,18 @@ gate:
 rules:
   # Other wild keys
   - id: broken-combinations
-    when:
-      keys: ["landuse", "natural", "landcover",
-             "man_made", "leisure", "amenity", "sport",
-             "office", "shop", "craft",
-             "power", "building", "waterway", "aeroway", "tourism",
-             "information", "marker", "craft",
-             "addr:housenumber", "addr:city", "addr:postcode", "addr:street",
-             "barrier", "public_transport", "historic", "place"]
-      report:
-        layer: wayproblems
-        style: default
-        problem: "Tag combination broken highway - ${key}"
+    keys: ["landuse", "natural", "landcover",
+           "man_made", "leisure", "amenity", "sport",
+           "office", "shop", "craft",
+           "power", "building", "waterway", "aeroway", "tourism",
+           "information", "marker", "craft",
+           "addr:housenumber", "addr:city", "addr:postcode", "addr:street",
+           "barrier", "public_transport", "historic", "place"]
+    when: {has_key: "{key}"}
+    report:
+      layer: wayproblems
+      style: default
+      problem: "Tag combination broken highway - ${key}"
 
   # --- layer= -----------------------------------------------------------------
   # Grouped under one parent so the "layer exists?" decision is made once per
