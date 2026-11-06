@@ -158,26 +158,48 @@ gate:
 
 rules:
   # Other wild keys
-  - id: broken-combinations
-    keys: ["landuse", "landcover",
-           "man_made", "leisure", "amenity", "sport",
+  - id: inv-combinations
+    keys: ["man_made", "leisure", "amenity", "sport",
            "office", "shop", "craft",
            "power", "building", "waterway", "aeroway", "tourism",
            "information", "marker", "craft",
            "addr:housenumber", "addr:city", "addr:postcode", "addr:street",
-           "barrier", "public_transport", "historic", "place"]
+           "barrier", "public_transport", "place"]
     when: {has_key: "{key}"}
     report:
       layer: wayproblems
       style: yellowline
-      problem: "Tag combination broken highway - ${key}"
+      problem: "Tag combination broken highway - ${key}=${value}"
 
-  - id: natural-invalid-value
+  - id: inv-combination-shoplike
+    keys: ["office", "shop", "craft"]
+    when: {has_key: "{key}"}
+    report:
+      layer: wayproblems
+      style: yellowline
+      problem: "Tag combination broken highway - ${key}=${value}"
+
+  - id: inv-combination-landcover
+    keys: ["landuse", "landcover"]
+    when: {has_key: "{key}"}
+    report:
+      layer: wayproblems
+      style: yellowline
+      problem: "Tag combination broken highway - ${key}=${value}"
+
+  - id: inv-combination-natural
     when: {has_key: natural, not_in: {key: natural, values: [ridge, valley]}}
     report:
       layer: wayproblems
       style: yellowline
       problem: "Invalid tag combination natural=${natural}"
+
+  - id: inv-combination-historic
+    when: {has_key: historic, not_in: {key: historic, values: [railway, tramway, hollow_way]}}
+    report:
+      layer: wayproblems
+      style: yellowline
+      problem: "Invalid tag combination historic=${historic}"
 
   # --- layer= -----------------------------------------------------------------
   # Grouped under one parent so the "layer exists?" decision is made once per
