@@ -33,6 +33,13 @@ build:trixie:packages:
     - ( cd build ; cmake .. )
     - make -C build
 
+trigger:osmprocess:wayproblems:
+  needs:
+    - job: build:trixie:packages
+      artifacts: false
+  trigger:
+    project: osm/process/wayproblems
+
 build:trixie:git:latest:
   image: amd64/debian:trixie
   stage: build
