@@ -51,7 +51,6 @@ test:trixie:package:
     - build:trixie:packages
   script:
     - apt-get update
-    - apt-get install s3cmd
     - apt-get -fy install --no-install-recommends --no-install-suggests libboost-program-options1.83.0 libgdal36 sqlite3 libyaml-cpp0.8 s3cmd
     - cp ${S3_CFG} ~/.s3cfg
     - s3cmd get s3://osm/pbf/kreisgt.pbf
