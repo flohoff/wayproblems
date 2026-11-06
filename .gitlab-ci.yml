@@ -16,6 +16,7 @@ build:trixie:git:stable:
   script:
     - apt-get update
     - apt-get install --no-install-suggests --no-install-recommends -fuy ${DEBIAN_PKG_ESSENTIAL}
+    - git config --global url."${GIT_BASE}/mirror".insteadOf https://github.com
     - git clone ${GIT_BASE}/mirror/osmcode/libosmium.git --branch ${LIBOSMIUM_STABLE_VERSION}
     - git clone ${GIT_BASE}/mirror/nlohmann-json --branch ${NLOHMANN_STABLE_VERSION}
     - git clone ${GIT_BASE}/mirror/protozero --branch ${PROTOZERO_STABLE_VERSION}
@@ -48,6 +49,7 @@ build:trixie:git:latest:
   script:
     - apt-get update
     - apt-get install --no-install-suggests --no-install-recommends -fuy ${DEBIAN_PKG_ESSENTIAL}
+    - git config --global url."${GIT_BASE}/mirror".insteadOf https://github.com
     - git clone ${GIT_BASE}/mirror/libosmium
     - git clone ${GIT_BASE}/mirror/nlohmann-json
     - git clone ${GIT_BASE}/mirror/protozero
@@ -73,6 +75,7 @@ build:sid:git:latest:
   script:
     - apt-get update
     - apt-get install --no-install-suggests --no-install-recommends -fuy ${DEBIAN_PKG_ESSENTIAL}
+    - git config --global url."${GIT_BASE}/mirror".insteadOf https://github.com
     - git clone ${GIT_BASE}/mirror/libosmium
     - git clone ${GIT_BASE}/mirror/nlohmann-json
     - git clone ${GIT_BASE}/mirror/protozero
