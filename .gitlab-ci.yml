@@ -17,6 +17,7 @@ variables:
 build:trixie:git:stable:
   image: amd64/debian:trixie
   stage: build-secondary
+  dependencies: []
   variables:
     GIT_BASE: https://gitlab-ci-token:${CI_JOB_TOKEN}@gl.zz.de
   script:
