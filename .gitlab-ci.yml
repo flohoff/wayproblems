@@ -51,7 +51,7 @@ test:trixie:package:
     - build:trixie:packages
   script:
     - apt-get update
-    - apt-get -fy install --no-install-recommends --no-install-suggests libboost-program-options1.83.0 libgdal36 sqlite3 libyaml-cpp0.8 s3cmd
+    - apt-get -fy install --no-install-recommends --no-install-suggests libboost-program-options1.83.0 libgdal36 sqlite3 libyaml-cpp0.8 s3cmd ca-certificates
     - cp ${S3_CFG} ~/.s3cfg
     - s3cmd get s3://osm/pbf/kreisgt.pbf
     - build/wayproblems -i kreisgt.pbf -o kreisgt.sqlite -r rules/rules-de.yaml -r rules/rules.yaml
