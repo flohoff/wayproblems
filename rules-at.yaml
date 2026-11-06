@@ -2,6 +2,7 @@
 maps:
   maxspeed_types:
     "AT:urban": 50
+    "AT:rural": 100
     "AT:bicycle_road": 30
     "AT:zone10": 10
     "AT:zone20": 20
@@ -15,6 +16,7 @@ maps:
 lists:
   maxspeed_source_known:
     - "AT:urban"
+    - "AT:rural"
     - "AT:bicycle_road"
     - "AT:zone10"
     - "AT:zone20"
