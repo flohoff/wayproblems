@@ -159,7 +159,7 @@ gate:
 rules:
   # Other wild keys
   - id: broken-combinations
-    keys: ["landuse", "natural", "landcover",
+    keys: ["landuse", "landcover",
            "man_made", "leisure", "amenity", "sport",
            "office", "shop", "craft",
            "power", "building", "waterway", "aeroway", "tourism",
@@ -171,6 +171,13 @@ rules:
       layer: wayproblems
       style: yellowline
       problem: "Tag combination broken highway - ${key}"
+
+  - id: natural-invalid-value
+    when: {has_key: natural, not_in: {key: natural, values: [ridge, valley]}}
+    report:
+      layer: wayproblems
+      style: yellowline
+      problem: "Invalid tag combination natural=${natural}"
 
   # --- layer= -----------------------------------------------------------------
   # Grouped under one parent so the "layer exists?" decision is made once per
