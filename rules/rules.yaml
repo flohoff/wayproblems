@@ -169,7 +169,7 @@ rules:
     when: {has_key: "{key}"}
     report:
       layer: wayproblems
-      style: default
+      style: yellowline
       problem: "Tag combination broken highway - ${key}"
 
   # --- layer= -----------------------------------------------------------------
