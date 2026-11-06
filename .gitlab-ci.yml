@@ -2,6 +2,8 @@
 
 stages:
   - build
+  - test
+  - trigger
   - build-secondary
 
 variables:
@@ -44,7 +46,7 @@ build:trixie:packages:
 
 test:trixie:package:
   image: amd64/debian:trixie
-  stage: build
+  stage: test
   needs:
     - build:trixie:packages
   script:
@@ -56,6 +58,7 @@ test:trixie:package:
     - build/wayproblems -i kreisgt.pbf -o kreisgt.sqlite -r rules/rules-de.yaml -r rules/rules.yaml
 
 trigger:osmprocess:wayproblems:
+  stage: trigger
   needs:
     - job: build:trixie:packages
       artifacts: false
