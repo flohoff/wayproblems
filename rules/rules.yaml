@@ -1651,6 +1651,7 @@ rules:
         when:
           eq: {key: highway, value: track}
           has_key: name
+          missing_key: "note:name"
         report:
           layer: wayproblems
           style: brownline
