@@ -164,7 +164,7 @@ rules:
            "power", "building", "waterway", "aeroway", "tourism",
            "information", "marker", "craft",
            "addr:housenumber", "addr:city", "addr:postcode", "addr:street",
-           "barrier", "place"]
+           "barrier"]
     when: {has_key: "{key}"}
     report:
       layer: wayproblems
@@ -207,6 +207,15 @@ rules:
       layer: wayproblems
       style: yellowline
       problem: "Invalid tag combination historic=${historic}"
+
+  - id: inv-combination-place
+    when:
+      has_key: place
+      not: {fact: closed}
+    report:
+      layer: wayproblems
+      style: yellowline
+      problem: "place=${place} on unclosed highway"
 
   # --- layer= -----------------------------------------------------------------
   # Grouped under one parent so the "layer exists?" decision is made once per
