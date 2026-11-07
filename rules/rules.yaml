@@ -159,7 +159,7 @@ gate:
 rules:
   # Other wild keys
   - id: inv-combinations
-    keys: ["leisure", "amenity", "sport",
+    keys: ["amenity", "sport",
            "office", "shop", "craft",
            "power", "building", "waterway", "aeroway", "tourism",
            "information", "marker", "craft",
@@ -207,6 +207,13 @@ rules:
       layer: wayproblems
       style: yellowline
       problem: "Invalid tag combination historic=${historic}"
+
+  - id: inv-combination-leisure
+    when: {has_key: leisure, not_in: {key: leisure, values: [barefoot]}}
+    report:
+      layer: wayproblems
+      style: yellowline
+      problem: "Invalid tag combination leisure=${leisure}"
 
   - id: inv-combination-place
     when:
