@@ -1390,7 +1390,7 @@ rules:
         report:
           layer: cycling
           style: default
-          problem: "cycleway:left + cycleway:right are the same - should be cycleway=no"
+          problem: "cycleway:left + cycleway:right are the same - should be cycleway:both=no"
 
       - id: cycleway-side-without-cycleway
         when:
@@ -1432,18 +1432,6 @@ rules:
           layer: cycling
           style: default
           problem: "way has cycleway:right=* and no cycleway=right"
-
-      - id: cycleway-both-sides-without-both
-        when:
-          - has_key: "cycleway:left"
-          - not_in: {key: "cycleway:left", values: [none, "no", "0"]}
-          - has_key: "cycleway:right"
-          - not_in: {key: "cycleway:right", values: [none, "no", "0"]}
-          - not: {eq: {key: cycleway, value: both}}
-        report:
-          layer: cycling
-          style: default
-          problem: "way has cycleway:right=* and left=* and no cycleway=both"
 
   # Note: the C++ check "cycleway:left" had a trailing space in the key and never
   # fired - this rule uses the correct key.
